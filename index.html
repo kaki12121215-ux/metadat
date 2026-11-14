@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#15171A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Metadat">
+<title>Metadat</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preload" href="fonts/interd-600.woff" as="font" type="font/woff" crossorigin>
+<link rel="stylesheet" href="css/metadat.css?v=1.0.0">
+</head>
+<body>
+
+<div id="intro"><i class="lens"></i><div class="stage2"><div class="w" id="introW"></div><div class="d"><i></i><i></i><i></i></div></div><div class="tag">Los datos de cada foto</div></div>
+
+<!-- INICIO -->
+<section class="view" id="vHome">
+  <div class="home-top"><div class="word">metadat<span class="dots"><i></i><i></i><i></i></span></div><button class="ib tap" data-go="ajustes" aria-label="Ajustes" data-i="gear"></button></div>
+  <div class="scroll"><div class="wrap" id="homeBody"></div></div>
+</section>
+
+<!-- COMPOSITOR -->
+<section class="view dark off" id="vComp">
+  <div class="hdr"><button class="ib tap" data-back aria-label="Volver" data-i="back"></button><div class="ctr">Componer</div><div class="sp"></div>
+        <button class="ib tap" id="btnCmp" aria-label="Comparar (mantén pulsado)" data-i="compare"></button>
+    <button class="ib tap cian" id="btnExport" aria-label="Exportar" data-i="share"></button></div>
+  <div class="stage" id="stage"><div class="cvw" id="cvw"></div><div class="orig">Original</div><div class="hist" id="hist"></div><button class="hbtn tap" id="btnHist" aria-label="Histograma" data-i="hist" data-s="18"></button><div class="busy" id="busy"><i></i><i></i><i></i></div></div>
+  <div class="panel">
+    <div class="pane on" id="pEstilo">
+      <div class="strip" id="frStrip"></div>
+      <div class="opts" id="estOpts"></div>
+    </div>
+    <div class="pane" id="pImagen">
+      <div class="opts" style="padding-top:2px;padding-bottom:8px"><div class="seg" id="segImg"><button data-v="film" class="on">Película</button><button data-v="adj">Ajustes</button></div></div>
+      <div id="imgFilm"><div class="strip" id="filmStrip"></div><div class="cap" id="filmCap"></div><div class="ruler" id="rulerFilm"></div></div>
+      <div id="imgAdj" style="display:none"><div class="adj-row" id="adjRow"></div><div class="ruler" id="rulerAdj"></div></div>
+    </div>
+    <div class="pane" id="pDatos">
+      <div class="dhead"><small>Toca un dato para cambiarlo.<br>El interruptor lo muestra u oculta.</small><button class="chip tap" id="btnGear">Mi equipo</button></div>
+      <div class="dlist" id="dList"></div>
+    </div>
+    <div class="tabs"><div class="seg" id="segTabs"><button class="on" data-v="pEstilo"><span data-i="grid" data-s="16"></span>Estilo</button><button data-v="pImagen"><span data-i="aperture" data-s="16"></span>Imagen</button><button data-v="pDatos"><span data-i="tag" data-s="16"></span>Datos</button></div></div>
+  </div>
+</section>
+
+<!-- VISTA GENÉRICA DE HERRAMIENTAS (se rellena por JS) -->
+<section class="view off" id="vTool"></section>
+<section class="view off" id="vTool2"></section>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"></div>
+<div class="flash" id="flash"></div>
+<input type="file" id="fileOne" accept="image/*" hidden>
+<input type="file" id="fileMany" accept="image/*" multiple hidden>
+<input type="file" id="fileAny" hidden>
+
+<script src="js/exif.js?v=1.0.0"></script>
+<script src="js/img.js?v=1.0.0"></script>
+<script src="js/frames.js?v=1.0.0"></script>
+<script src="js/app.js?v=1.0.0"></script>
+</body>
+</html>
