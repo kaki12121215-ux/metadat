@@ -1,28 +1,67 @@
 /* Metadat · procesado de la foto: películas, ajustes, recorte, histograma y desenfoque. */
 (function () {
   // Películas propias. Valores pensados como "carácter", no como imitación de ninguna marca.
+  // Películas propias. Cada una parte del carácter de un tipo de película o de un look de color conocido.
+  const CATS = [['all', 'Todas'], ['color', 'Color'], ['bn', 'B/N'], ['cine', 'Cine'], ['tema', 'Temas']];
   const FILMS = [
-    { id: 'none', name: 'Ninguna', desc: 'La foto tal cual' },
-    { id: 'retrato400', name: 'Retrato 400', desc: 'Piel cálida, sombras suaves', warm: .08, sat: -.06, con: -.06, fade: .05, sh: [6, 2, -4], hi: [8, 4, -6], grain: .18 },
-    { id: 'retrato160', name: 'Retrato 160', desc: 'Delicada y limpia', warm: .04, sat: -.12, con: -.1, fade: .07, sh: [0, 3, 4], hi: [6, 4, 0], grain: .1 },
-    { id: 'paisaje100', name: 'Paisaje 100', desc: 'Color intenso, mucho detalle', warm: .02, sat: .2, con: .12, fade: 0, sh: [-2, 0, 6], hi: [4, 3, -2], grain: .06 },
-    { id: 'dorada200', name: 'Dorada 200', desc: 'Cálida y con grano fino', warm: .14, sat: .06, con: .04, fade: .06, sh: [8, 4, -6], hi: [12, 6, -10], grain: .22 },
-    { id: 'plata400', name: 'Plata 400', desc: 'Blanco y negro con contraste', bw: 1, con: .18, fade: .04, grain: .3 },
-    { id: 'plata100', name: 'Plata 100', desc: 'Blanco y negro suave', bw: 1, con: -.04, fade: .08, sh: [2, 2, 4], grain: .12 },
-    { id: 'diapositiva50', name: 'Diapositiva 50', desc: 'Negros profundos, color vivo', warm: -.02, sat: .24, con: .22, fade: 0, sh: [-4, 0, 8], hi: [2, 2, 0], grain: .05 },
-    { id: 'cine800t', name: 'Cine 800T', desc: 'Luz de tungsteno, noche', warm: -.12, sat: -.02, con: .06, fade: .06, sh: [-6, 4, 12], hi: [10, 4, -8], grain: .34, halo: 1 },
-    { id: 'invierno', name: 'Invierno 160', desc: 'Fría y desaturada', warm: -.08, sat: -.24, con: -.02, fade: .1, sh: [0, 4, 8], hi: [0, 2, 6], grain: .12 }
+    { id: 'none', name: 'Ninguna', desc: 'La foto tal cual', cat: 'all' },
+    // --- color: negativos y diapositivas clásicas
+    { id: 'retrato400', cat: 'color', name: 'Retrato 400', desc: 'Negativo de retrato: piel cálida, sombras suaves', warm: .07, sat: -.06, con: -.06, fade: .05, sh: [6, 2, -4], hi: [8, 4, -6], grain: .18 },
+    { id: 'retrato160', cat: 'color', name: 'Retrato 160', desc: 'Negativo fino, delicado y limpio', warm: .04, sat: -.12, con: -.1, fade: .07, sh: [0, 3, 4], hi: [6, 4, 0], grain: .1 },
+    { id: 'pastel400', cat: 'color', name: 'Pastel 400', desc: 'Tonos pastel, verdes menta y luces altas', warm: -.02, tint: -.03, sat: -.14, con: -.14, fade: .09, exp: .12, sh: [-2, 6, 6], hi: [2, 5, 2], grain: .12 },
+    { id: 'paisaje100', cat: 'color', name: 'Paisaje 100', desc: 'Diapositiva de paisaje: color intenso y detalle', warm: .02, sat: .2, vib: .15, con: .12, sh: [-2, 0, 6], hi: [4, 3, -2], grain: .06 },
+    { id: 'vivida100', cat: 'color', name: 'Vívida 100', desc: 'Negativo moderno, muy saturado y nítido', warm: .03, sat: .28, con: .16, sh: [0, -2, 4], hi: [6, 2, -4], grain: .04 },
+    { id: 'dorada200', cat: 'color', name: 'Dorada 200', desc: 'Negativo de diario: cálido y con grano fino', warm: .14, sat: .06, con: .04, fade: .06, sh: [8, 4, -6], hi: [12, 6, -10], grain: .22 },
+    { id: 'super400', cat: 'color', name: 'Súper 400', desc: 'Negativo de consumo: verdes fríos y magentas vivos', warm: -.03, tint: -.04, sat: .08, con: .08, fade: .03, sh: [-4, 6, 2], hi: [4, 0, 4], grain: .2 },
+    { id: 'diapositiva50', cat: 'color', name: 'Diapositiva 50', desc: 'Negros profundos y color vivo', warm: -.02, sat: .24, con: .22, sh: [-4, 0, 8], hi: [2, 2, 0], grain: .05 },
+    { id: 'croma64', cat: 'color', name: 'Croma 64', desc: 'Diapositiva de los 60: rojos densos, cielos profundos', warm: .05, sat: .14, con: .24, fade: .02, sh: [4, -2, -6], hi: [8, 4, -8], grain: .1, vig: .15 },
+    { id: 'instantanea600', cat: 'color', name: 'Instantánea 600', desc: 'Foto instantánea: lavada, verdosa y suave', warm: .06, tint: -.05, sat: -.18, con: -.16, fade: .14, sh: [0, 10, 8], hi: [10, 8, -6], grain: .16, vig: .2 },
+    // --- blanco y negro
+    { id: 'plata400', cat: 'bn', name: 'Plata 400', desc: 'Blanco y negro de reportaje, con contraste', bw: 1, con: .18, fade: .04, grain: .3 },
+    { id: 'plata100', cat: 'bn', name: 'Plata 100', desc: 'Blanco y negro suave, grano muy fino', bw: 1, con: -.04, fade: .08, sh: [2, 2, 4], grain: .12 },
+    { id: 'grano3200', cat: 'bn', name: 'Grano 3200', desc: 'Película rápida forzada: grano grueso', bw: 1, con: .26, fade: .08, exp: .08, grain: .7 },
+    { id: 'carbon', cat: 'bn', name: 'Carbón', desc: 'Alto contraste, negros cerrados', bw: 1, con: .5, exp: -.05, grain: .15, vig: .2 },
+    { id: 'filtrorojo', cat: 'bn', name: 'Filtro rojo', desc: 'Como con filtro rojo: cielos oscuros y dramáticos', bw: 1, mix: [.9, .25, -.15], con: .22, grain: .2 },
+    { id: 'sepia', cat: 'bn', name: 'Sepia', desc: 'Virado sepia de copia antigua', bw: 1, con: .04, fade: .1, sh: [14, 6, -8], hi: [16, 10, -8], grain: .2 },
+    { id: 'selenio', cat: 'bn', name: 'Selenio', desc: 'Virado frío, violáceo en las sombras', bw: 1, con: .12, sh: [2, 0, 12], hi: [4, 2, 4], grain: .16 },
+    { id: 'cianotipo', cat: 'bn', name: 'Cianotipo', desc: 'Copia azul de Prusia', bw: 1, con: .16, fade: .06, sh: [-22, -4, 26], hi: [-12, 4, 16], grain: .1 },
+    // --- cine
+    { id: 'cine800t', cat: 'cine', name: 'Cine 800T', desc: 'Negativo de tungsteno: noches azuladas', warm: -.12, sat: -.02, con: .06, fade: .06, sh: [-6, 4, 12], hi: [10, 4, -8], grain: .34 },
+    { id: 'azulnaranja', cat: 'cine', name: 'Azul y naranja', desc: 'El etalonaje de superproducción: pieles cálidas, sombras verdiazules', sat: .1, con: .14, sh: [-16, 4, 16], hi: [16, 6, -14], grain: .08 },
+    { id: 'sinblanqueo', cat: 'cine', name: 'Sin blanqueo', desc: 'Proceso sin blanqueo: desaturado y muy contrastado', sat: -.5, con: .4, fade: .03, sh: [0, 2, 4], grain: .28 },
+    { id: 'thriller', cat: 'cine', name: 'Thriller', desc: 'Dominante verde y luces amarillentas', tint: -.06, sat: -.12, con: .18, sh: [-8, 10, -2], hi: [8, 10, -12], grain: .14, vig: .2 },
+    { id: 'nocheamericana', cat: 'cine', name: 'Noche americana', desc: 'Día rodado como noche: oscuro y azul', warm: -.18, sat: -.3, con: .2, exp: -.5, sh: [-8, 0, 16], hi: [-6, 2, 12], vig: .35 },
+    { id: 'western', cat: 'cine', name: 'Western', desc: 'Polvo y sol: ocres cálidos, poco color', warm: .16, sat: -.2, con: .16, fade: .05, sh: [10, 4, -8], hi: [14, 8, -12], grain: .2, vig: .2 },
+    { id: 'tecnicolor', cat: 'cine', name: 'Tricromía', desc: 'Color de cine clásico en tres tiras: primarios muy vivos', sat: .4, vib: .2, con: .2, sh: [-4, 0, 6], hi: [6, 0, -4], grain: .1 },
+    // --- temas
+    { id: 'anos70', cat: 'tema', name: 'Años 70', desc: 'Copia envejecida: cálida y desvaída', warm: .12, sat: -.1, con: -.1, fade: .16, sh: [12, 6, 0], hi: [10, 6, -12], grain: .26 },
+    { id: 'mate', cat: 'tema', name: 'Mate', desc: 'Negros levantados y poco contraste', sat: -.08, con: -.16, fade: .18, sh: [2, 4, 6] },
+    { id: 'invierno', cat: 'tema', name: 'Invierno 160', desc: 'Fría y desaturada', warm: -.08, sat: -.24, con: -.02, fade: .1, sh: [0, 4, 8], hi: [0, 2, 6], grain: .12 },
+    { id: 'verano', cat: 'tema', name: 'Verano', desc: 'Sol de tarde: cálida y saturada', warm: .12, sat: .16, vib: .2, con: .06, exp: .1, hi: [10, 4, -8] },
+    { id: 'crepusculo', cat: 'tema', name: 'Crepúsculo', desc: 'Sombras violetas y luces anaranjadas', sat: .06, con: .1, fade: .04, sh: [8, -6, 20], hi: [18, 4, -12], grain: .1 },
+    { id: 'bosque', cat: 'tema', name: 'Bosque', desc: 'Verdes profundos y apagados, aire húmedo', tint: -.04, sat: -.16, con: .12, fade: .06, sh: [-6, 8, 2], hi: [4, 6, -6], vig: .2 },
+    { id: 'neon', cat: 'tema', name: 'Neón', desc: 'Ciudad de noche: magentas y cianes', tint: .06, sat: .3, con: .2, sh: [6, -8, 22], hi: [16, -4, 10], grain: .2 }
   ];
 
   const ADJ = [
+    { id: 'exp', name: 'Exposición', min: -100, max: 100 },
     { id: 'bri', name: 'Brillo', min: -100, max: 100 },
     { id: 'con', name: 'Contraste', min: -100, max: 100 },
+    { id: 'hil', name: 'Luces', min: -100, max: 100 },
+    { id: 'sha', name: 'Sombras', min: -100, max: 100 },
+    { id: 'whi', name: 'Blancos', min: -100, max: 100 },
+    { id: 'bla', name: 'Negros', min: -100, max: 100 },
     { id: 'sat', name: 'Saturación', min: -100, max: 100 },
+    { id: 'vib', name: 'Viveza', min: -100, max: 100 },
     { id: 'tem', name: 'Temperatura', min: -100, max: 100 },
     { id: 'tin', name: 'Tono', min: -100, max: 100 },
-    { id: 'sha', name: 'Sombras', min: -100, max: 100 },
+    { id: 'spl', name: 'Tono partido', min: -100, max: 100 },
+    { id: 'cla', name: 'Claridad', min: -100, max: 100 },
+    { id: 'shp', name: 'Nitidez', min: 0, max: 100 },
+    { id: 'fad', name: 'Desvanecido', min: 0, max: 100 },
     { id: 'gra', name: 'Grano', min: 0, max: 100 },
-    { id: 'vig', name: 'Viñeta', min: 0, max: 100 }
+    { id: 'vig', name: 'Viñeta', min: 0, max: 100 },
+    { id: 'blu', name: 'Desenfoque', min: 0, max: 100 }
   ];
 
   const clamp = v => v < 0 ? 0 : v > 255 ? 255 : v;
@@ -47,46 +86,66 @@
   // Aplica película + ajustes sobre un canvas (en sitio)
   function process(cv, st) {
     const film = FILMS.find(f => f.id === st.film) || FILMS[0];
-    const a = st.adj || {};
+    const a = st.adj || {}, A = k => (a[k] || 0) / 100;
     const I = (st.filmAmt == null ? 100 : st.filmAmt) / 100;
-    const fx = film.id === 'none' ? {} : film;
-    const bri = (a.bri || 0) / 100, con = (a.con || 0) / 100 + (fx.con || 0) * I, sat = (a.sat || 0) / 100 + (fx.sat || 0) * I;
-    const tem = (a.tem || 0) / 100 * .12 + (fx.warm || 0) * I, tin = (a.tin || 0) / 100 * .08, sha = (a.sha || 0) / 100;
-    const fade = (fx.fade || 0) * I, bw = (fx.bw || 0) * I;
-    const grain = Math.max((a.gra || 0) / 100, (fx.grain || 0) * I * .6), vig = (a.vig || 0) / 100;
-    const shT = (fx.sh || [0, 0, 0]).map(v => v * I), hiT = (fx.hi || [0, 0, 0]).map(v => v * I);
-    const plain = !bri && !con && !sat && !tem && !tin && !sha && !fade && !bw && !grain && !vig && !shT.some(Boolean) && !hiT.some(Boolean);
+    const fx = film.id === 'none' ? {} : film, f = k => (fx[k] || 0) * I;
+    const exp = A('exp') * 1.2 + f('exp'), bri = A('bri'), con = A('con') + f('con'), hil = A('hil'), sha = A('sha'), whi = A('whi'), bla = A('bla');
+    const sat = A('sat') + f('sat'), vib = A('vib') + f('vib'), tem = A('tem') * .12 + f('warm'), tin = A('tin') * .08 + f('tint');
+    const fade = Math.max(0, A('fad')) * .25 + f('fade'), bw = f('bw'), mix = fx.mix || [.3, .59, .11], spl = A('spl');
+    const grain = Math.max(A('gra'), f('grain') * .6), vig = Math.max(A('vig'), f('vig')), cla = A('cla'), shp = A('shp'), blu = A('blu');
+    const shT = (fx.sh || [0, 0, 0]).map((v, i) => v * I + spl * [-12, 2, 12][i]), hiT = (fx.hi || [0, 0, 0]).map((v, i) => v * I + spl * [14, 5, -12][i]);
+    const plain = ![exp, bri, con, hil, sha, whi, bla, sat, vib, tem, tin, fade, bw, grain, vig, cla, shp, blu].some(Boolean) && !shT.some(Boolean) && !hiT.some(Boolean);
     if (plain) return cv;
-    // curva tonal común
     const lut = new Float32Array(256);
-    const cf = con >= 0 ? 1 + con * 1.6 : 1 + con;
+    const cf = con >= 0 ? 1 + con * 1.6 : 1 + con * .8, eg = Math.pow(2, exp);
     for (let i = 0; i < 256; i++) {
-      let v = i / 255;
-      v = v + bri * .35 * (1 - Math.abs(v - .5));
-      if (sha) v = v + sha * .25 * Math.pow(1 - v, 3) * (v > .02 ? 1 : v * 50);
+      let v = i / 255 * eg;
+      v = v + bri * .35 * (1 - Math.abs(Math.min(1, v) - .5));
+      const u = Math.min(1, Math.max(0, v)), iu = 1 - u;
+      v += sha * .25 * iu * iu * iu * (u > .02 ? 1 : u * 50) + hil * .25 * u * u * u * (iu > .02 ? 1 : iu * 50) * 1.6 * (1 - u * .4);
+      v += whi * .2 * Math.pow(u, 6) + bla * .2 * Math.pow(iu, 6);
       v = (v - .5) * cf + .5;
       v = fade + v * (1 - fade);
       lut[i] = Math.min(1, Math.max(0, v)) * 255;
     }
     const x = cv.getContext('2d', { willReadFrequently: true });
     const w = cv.width, h = cv.height;
+    const soft = div => { // copia desenfocada del mismo tamaño
+      const sw = Math.max(4, Math.round(w / div)), sh2 = Math.max(4, Math.round(h / div));
+      const s = document.createElement('canvas'); s.width = sw; s.height = sh2; const sx = s.getContext('2d'); sx.imageSmoothingQuality = 'high'; sx.drawImage(cv, 0, 0, sw, sh2);
+      const b = document.createElement('canvas'); b.width = w; b.height = h; const bx = b.getContext('2d', { willReadFrequently: true }); bx.imageSmoothingQuality = 'high'; bx.drawImage(s, 0, 0, w, h);
+      return bx.getImageData(0, 0, w, h).data;
+    };
+    const B = (cla || blu) ? soft(Math.max(6, w / 60)) : null, Sm = shp ? soft(2) : null;
     const d = x.getImageData(0, 0, w, h), p = d.data;
     const cx = w / 2, cy = h / 2, md = Math.hypot(cx, cy);
     let seed = 1337;
     const rnd = () => { seed = (seed * 1664525 + 1013904223) | 0; return ((seed >>> 8) & 0xffff) / 65536 - .5; };
     const gAmp = grain * 38 * Math.max(.6, Math.min(1.4, w / 1600));
+    const needD = vig || blu;
     for (let y = 0; y < h; y++) {
       for (let xx = 0; xx < w; xx++) {
         const o = (y * w + xx) * 4;
-        let r = lut[p[o]], g = lut[p[o + 1]], b = lut[p[o + 2]];
-        r += tem * 255 * .5; b -= tem * 255 * .5; g -= tin * 255 * .5; r += tin * 255 * .15; b += tin * 255 * .15;
+        let r0 = p[o], g0 = p[o + 1], b0 = p[o + 2], det = 0;
+        const dd = needD ? Math.hypot(xx - cx, y - cy) / md : 0;
+        if (cla || shp) {
+          const L0 = .2126 * r0 + .7152 * g0 + .0722 * b0;
+          if (cla) { const LB = .2126 * B[o] + .7152 * B[o + 1] + .0722 * B[o + 2], t0 = L0 / 255; det += cla * .9 * (L0 - LB) * (1 - Math.abs(2 * t0 - 1) * .7); }
+          if (shp) det += shp * 1.8 * (L0 - (.2126 * Sm[o] + .7152 * Sm[o + 1] + .0722 * Sm[o + 2]));
+        }
+        if (blu) { let k = (dd - .28) / .5; k = k < 0 ? 0 : k > 1 ? 1 : k; k *= blu; r0 += (B[o] - r0) * k; g0 += (B[o + 1] - g0) * k; b0 += (B[o + 2] - b0) * k; det *= 1 - k; }
+        let r = lut[r0 | 0], g = lut[g0 | 0], b = lut[b0 | 0];
+        r += tem * 127; b -= tem * 127; g -= tin * 127; r += tin * 38; b += tin * 38;
         const L = .2126 * r + .7152 * g + .0722 * b;
-        if (sat) { r = L + (r - L) * (1 + sat); g = L + (g - L) * (1 + sat); b = L + (b - L) * (1 + sat); }
-        if (bw) { const l2 = .3 * r + .59 * g + .11 * b; r += (l2 - r) * bw; g += (l2 - g) * bw; b += (l2 - b) * bw; }
-        const t = L / 255;
-        const ws = (1 - t) * (1 - t), wh = t * t;
-        r += shT[0] * ws + hiT[0] * wh; g += shT[1] * ws + hiT[1] * wh; b += shT[2] * ws + hiT[2] * wh;
-        if (vig) { const dd = Math.hypot(xx - cx, y - cy) / md; const f = 1 - vig * .75 * Math.pow(Math.max(0, dd - .35) / .65, 1.6); r *= f; g *= f; b *= f; }
+        if (sat || vib) {
+          let k = 1 + sat;
+          if (vib) { const mx = r > g ? (r > b ? r : b) : (g > b ? g : b), mn = r < g ? (r < b ? r : b) : (g < b ? g : b); k += vib * (1 - (mx - mn) / 255) * 1.1; }
+          if (k < 0) k = 0; r = L + (r - L) * k; g = L + (g - L) * k; b = L + (b - L) * k;
+        }
+        if (bw) { const l2 = mix[0] * r + mix[1] * g + mix[2] * b; r += (l2 - r) * bw; g += (l2 - g) * bw; b += (l2 - b) * bw; }
+        const t = L / 255, ws = (1 - t) * (1 - t), wh = t * t;
+        r += shT[0] * ws + hiT[0] * wh + det; g += shT[1] * ws + hiT[1] * wh + det; b += shT[2] * ws + hiT[2] * wh + det;
+        if (vig) { const fv = 1 - vig * .75 * Math.pow(Math.max(0, dd - .35) / .65, 1.6); r *= fv; g *= fv; b *= fv; }
         if (grain) { const n = rnd() * gAmp * (1 - Math.abs(t - .5)); r += n; g += n; b += n; }
         p[o] = clamp(r); p[o + 1] = clamp(g); p[o + 2] = clamp(b);
       }
@@ -154,5 +213,5 @@
     return dark ? 'Vino' : 'Rosa';
   }
 
-  window.MetaImg = { FILMS, ADJ, crop, process, histogram, blurred, palette, colorName };
+  window.MetaImg = { FILMS, CATS, ADJ, crop, process, histogram, blurred, palette, colorName };
 })();

@@ -1,7 +1,7 @@
 /* Metadat · app */
 (function () {
   'use strict';
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
   const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const FR = MetaFrames.F, FILMS = MetaImg.FILMS, ADJ = MetaImg.ADJ;
@@ -32,6 +32,9 @@
     map: '<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>', bw: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/>',
     roll: '<rect x="4" y="5" width="12" height="14" rx="2"/><path d="M16 8h4v8h-4M7 5V3M13 5V3M7 21v-2M13 21v-2"/>', lens: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/>',
     cloud: '<path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.4 1.6A3.3 3.3 0 0 0 7 18z"/>', moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>', bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+    undo: '<path d="M8 5L4 9l4 4"/><path d="M4 9h10a5.5 5.5 0 0 1 0 11h-4"/>', redo: '<path d="M16 5l4 4-4 4"/><path d="M20 9H10a5.5 5.5 0 0 0 0 11h4"/>',
+    expo: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 20L20 4M7.5 9.5h4M9.5 7.5v4M13 15.5h4"/>', hil: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18" fill="currentColor" fill-opacity=".0"/><path d="M12 7v10M15 8.5v7M18 11v2"/>', whi: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>', bla: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor"/>',
+    vib: '<path d="M12 3l2.6 6.2L21 10l-5 4.2L17.5 21 12 17.3 6.5 21 8 14.2 3 10l6.4-.8z"/>', split2: '<circle cx="12" cy="12" r="9"/><path d="M5.6 18.4L18.4 5.6"/><path d="M12 3a9 9 0 0 0-6.4 15.4z" fill="currentColor"/>', cla: '<path d="M12 3l9 16H3z"/><path d="M12 10v4"/>', shp: '<path d="M12 3l8 18-8-5-8 5z"/>', fad: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 16h8M8 12h8M8 8h8" stroke-opacity=".5"/>', blu: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 3"/>',
     tree: '<path d="M12 3l6 9h-4l4 6H6l4-6H6z"/><path d="M12 18v3"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>'
   };
   const ic = (n, s = 22, w = 2) => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${IC[n] || ''}</svg>`;
@@ -42,9 +45,10 @@
     get(k, d) { try { const v = localStorage.getItem('metadat.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem('metadat.' + k, JSON.stringify(v)); } catch (e) { toast('No se ha podido guardar: memoria llena'); } }
   };
-  const DEF = { frame: 'banda', theme: 'claro', film: 'none', filmAmt: 100, adj: {}, ratio: 0, ts: 1, showLogo: true, darkComp: true, size: 2160, fmt: 'jpeg', sign: '' };
-  const S = Object.assign({}, DEF, LS.get('settings', {}));
-  const saveS = () => LS.set('settings', S);
+  const DEF = { frame: 'banda', theme: 'claro', film: 'none', filmAmt: 100, adj: {}, ratio: 0, ts: 1, showLogo: true, darkComp: true, size: 2160, fmt: 'jpeg', sign: '', defCam: 'iPhone 13 Pro' };
+  const S = Object.assign({}, DEF, LS.get('settings', {}), { film: 'none', filmAmt: 100, adj: {}, ratio: 0 });
+  // la edición (película, ajustes, proporción) no se guarda: cada foto empieza limpia
+  const saveS = () => { const { film, filmAmt, adj, ratio, ...rest } = S; LS.set('settings', rest); };
   let COUNT = LS.get('count', 0);
   const DB = {
     open() { return new Promise((res, rej) => { const r = indexedDB.open('metadat', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
@@ -55,7 +59,8 @@
   // logos de marca
   const LOGOS = {}; const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
   Promise.all([loadImg('img/logo_negro.png'), loadImg('img/logo_blanco.png')]).then(([a, b]) => { LOGOS.negro = a; LOGOS.blanco = b; }).catch(() => { });
-  let CUSTOM = null; const cl = LS.get('customLogo', null); if (cl) loadImg(cl).then(i => CUSTOM = i).catch(() => { });
+  const CUSTOM = { claro: null, oscuro: null }; try { localStorage.removeItem('metadat.customLogo'); } catch (e) { }
+  ['claro', 'oscuro'].forEach(k => { const u = LS.get('logo_' + k, null); if (u) loadImg(u).then(i => CUSTOM[k] = i).catch(() => { }); });
 
   // ------------------------------------------------------------ avisos
   let tT; function toast(msg, dots) { const t = $('#toast'); t.innerHTML = (dots ? '<span class="dots"><i></i><i></i><i></i></span>' : '') + esc(msg); t.classList.add('on'); clearTimeout(tT); tT = setTimeout(() => t.classList.remove('on'), 2600); }
@@ -170,7 +175,13 @@
       software: ex.Software || ''
     };
   }
-  const hasExif = R => !!(R.cam || R.mmN || R.fn || R.sv || R.isoN || R.dtFromExif);
+  function rawOf(ex, file, img) {
+    const R = rawFromExif(ex, file, img);
+    R.read = [R.cam, R.mmN, R.fn, R.sv, R.isoN, R.dtFromExif, R.lat != null].filter(Boolean).length;
+    if (!R.cam && S.defCam) { R.cam = S.defCam; R.camDefault = true; }
+    if (/iphone|ipad/i.test(R.cam)) R.make = 'Apple';
+    return R;
+  }
   async function reverse(lat, lon) {
     try {
       const ctl = new AbortController(); setTimeout(() => ctl.abort(), 6000);
@@ -208,12 +219,14 @@
   }
 
   // ------------------------------------------------------------ compositor
-  const C = { P: null, P0: null, Pt: null, blur: null, pal: null, palN: null, cvs: null, pending: 0, hist: false };
+  const C = { P: null, P0: null, blur: null, pal: null, palN: null, cvs: null, hist: false };
   const stageEl = $('#stage'), cvw = $('#cvw');
+  const TSIZES = [[.88, 'Pequeño'], [1, 'Mediano'], [1.15, 'Grande'], [1.32, 'Muy grande']];
+  const tsName = v => (TSIZES.find(t => Math.abs(t[0] - v) < .01) || TSIZES[1])[1];
   function ratioOf(v) { return +v || 0; }
   function stParams() { return { film: S.film, filmAmt: S.filmAmt, adj: S.adj }; }
   async function buildBase(q = 1) {
-    const r = ratioOf(S.ratio), side = q === 1 ? 1500 : 760;
+    const r = ratioOf(S.ratio), side = q === 1 ? 1500 : 720;
     const P = MetaImg.crop(PH.img, r, side); MetaImg.process(P, stParams()); C.P = P;
     if (q === 1) { C.P0 = MetaImg.crop(PH.img, r, 1100); C.blur = MetaImg.blurred(P); C.pal = MetaImg.palette(P); C.palN = C.pal.map(MetaImg.colorName); }
   }
@@ -231,12 +244,16 @@
     else { cvw.innerHTML = ''; cvw.appendChild(c); }
     if (C.hist) drawHist();
   }
-  function fit(c) { const bw = cvw.clientWidth, bh = cvw.clientHeight; const k = Math.min(bw / c.width, bh / c.height); c.style.width = c.width * k + 'px'; c.style.height = c.height * k + 'px'; }
+  // la foto nunca se estira: el tamaño se calcula siempre con su proporción
+  function fit(c) { const bw = cvw.clientWidth, bh = cvw.clientHeight; if (!bw || !bh) return; const k = Math.min(bw / c.width, bh / c.height); c.style.width = Math.floor(c.width * k) + 'px'; c.style.height = Math.floor(c.height * k) + 'px'; }
+  const refit = () => $$('canvas', cvw).forEach(fit);
+  if (window.ResizeObserver) new ResizeObserver(refit).observe(cvw);
+  addEventListener('resize', refit);
   let rq = null, rqQ = 1;
   function refresh(q = 1, anim = false) { // recalcula película/ajustes y dibuja
     rqQ = Math.min(rqQ, q); if (rq) return;
     $('#busy').classList.add('on');
-    rq = requestAnimationFrame(() => setTimeout(async () => { const qq = rqQ; rq = null; rqQ = 1; await buildBase(qq); drawStage(anim); $('#busy').classList.remove('on'); if (qq === 1) { thumbsFilm(false); } }, 0));
+    rq = requestAnimationFrame(() => setTimeout(async () => { const qq = rqQ; rq = null; rqQ = 1; await buildBase(qq); drawStage(anim); $('#busy').classList.remove('on'); }, 0));
   }
   function drawHist() { const h = MetaImg.histogram(C.P); const el = $('#hist'); if (!el.children.length) el.innerHTML = h.map(() => '<i></i>').join(''); h.forEach((v, i) => el.children[i].style.height = Math.max(2, v * 38) + 'px'); }
   $('#btnHist').onclick = () => { C.hist = !C.hist; $('#hist').classList.toggle('on', C.hist); $('#btnHist').classList.toggle('on', C.hist); if (C.hist) drawHist(); };
@@ -245,23 +262,36 @@
     b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointerleave', off); b.addEventListener('pointercancel', off);
     b.onclick = () => { if (!C.comparing) toast('Mantén pulsado para ver la original'); };
   })();
-  addEventListener('resize', () => { if (C.cvs) fit(C.cvs); });
+
+  // ---- deshacer / rehacer / borrar cambios
+  const HI = { st: [], i: -1 };
+  const snap = () => JSON.stringify({ film: S.film, filmAmt: S.filmAmt, adj: S.adj, ratio: S.ratio });
+  function pushH() { const s = snap(); if (HI.st[HI.i] === s) return; HI.st = HI.st.slice(0, HI.i + 1); HI.st.push(s); if (HI.st.length > 60) HI.st.shift(); HI.i = HI.st.length - 1; syncH(); }
+  function syncH() { $('#btnUndo').disabled = HI.i <= 0; $('#btnRedo').disabled = HI.i >= HI.st.length - 1; $('#btnReset').disabled = snap() === CLEAN; }
+  const CLEAN = JSON.stringify({ film: 'none', filmAmt: 100, adj: {}, ratio: 0 });
+  function applyH(s) { const o = JSON.parse(s), rch = o.ratio !== S.ratio; Object.assign(S, o); syncEditUI(); refresh(1, true); if (rch) setTimeout(thumbsFrames, 200); syncH(); }
+  function syncEditUI() { thumbsFilm(false); renderFilmCap(); rulerFilm.sync(); renderAdj(); renderEstOpts(); }
+  $('#btnUndo').onclick = () => { if (HI.i > 0) applyH(HI.st[--HI.i]); };
+  $('#btnRedo').onclick = () => { if (HI.i < HI.st.length - 1) applyH(HI.st[++HI.i]); };
+  $('#btnReset').onclick = () => { if (snap() === CLEAN) return; applyH(CLEAN); pushH(); toast('Cambios borrados'); };
 
   async function openComposer(file, preset) {
     toast('Leyendo la foto…', true);
     let p; try { p = await readPhoto(file); } catch (e) { toast('No se ha podido abrir esta foto'); return; }
-    const R = rawFromExif(p.ex, file, p.img);
+    const R = rawOf(p.ex, file, p.img);
     PH = { file, img: p.img, ex: p.ex, R, on: { place: true }, name: file.name || 'foto' };
+    // cada foto empieza limpia: sin película, sin ajustes y en su proporción
+    Object.assign(S, { film: 'none', filmAmt: 100, adj: {}, ratio: 0 });
     if (preset) Object.assign(S, preset);
+    HI.st = []; HI.i = -1; filmCat = 'all';
     $('#vComp').classList.toggle('dark', S.darkComp);
     show('vComp');
     await wait(60);
-    await buildBase(1); drawStage(); thumbsFrames(); thumbsFilm(true); renderEstOpts(); renderAdj(); renderDatos(); renderFilmCap();
+    await buildBase(1); drawStage(); thumbsFrames(); renderCats(); thumbsFilm(true); renderEstOpts(); renderAdj(); renderDatos(); renderFilmCap(); rulerFilm.sync(); pushH();
     setSeg($('#segTabs'), 'pEstilo'); showPane('pEstilo');
-    if (!hasExif(R)) setTimeout(() => toast('Esta foto no trae datos. Puedes escribirlos en Datos'), 700);
+    if (!R.read) setTimeout(() => toast('Esta foto ha llegado sin datos de cámara'), 700);
     else $('#toast').classList.remove('on');
     if (R.lat != null && !R.place) reverse(R.lat, R.lon).then(pl => { if (pl && PH && PH.R === R && !R.place) { R.place = pl; drawStage(); renderDatos(); } });
-    // guardar como última foto
     try { const th = MetaImg.crop(p.img, 1.25, 360).toDataURL('image/jpeg', .8); LS.set('last', { th, cam: R.cam, dt: R.dt, w: R.w, h: R.h, name: PH.name }); DB.put('lastFile', file); } catch (e) { }
   }
 
@@ -288,57 +318,68 @@
     const el = $('#estOpts');
     el.innerHTML = `${segHTML([['claro', 'Claro'], ['oscuro', 'Oscuro']], S.theme)}
       <button class="chip tap" id="oRatio">${ic('ratio', 16)}<span>${RATIOS.find(r => r[0] == String(S.ratio))?.[1] || 'Original'}</span></button>
-      <button class="chip tap" id="oText">${ic('text', 16)}<span>${S.ts < 1 ? 'Texto S' : S.ts > 1 ? 'Texto L' : 'Texto M'}</span></button>
+      <button class="chip tap" id="oText">${ic('text', 16)}<span>${tsName(S.ts)}</span></button>
       <button class="chip tap ${S.showLogo ? 'on' : ''}" id="oLogo">${ic('logo', 16)}<span>Logo</span></button>
-      <button class="chip tap" id="oRec">${ic('save', 16)}<span>Guardar receta</span></button>`;
+      <button class="chip tap" id="oRec">${ic('save', 16)}<span>Guardar receta</span></button><i style="flex:none;width:8px;height:1px"></i>`;
     seg($('.seg', el), v => { S.theme = v; saveS(); drawStage(true); thumbsFrames(); });
-    $('#oRatio').onclick = () => pickList('Proporción', RATIOS.map(([v, l]) => ({ v, l, d: { '1': 'Cuadrada', '1.25': 'Para Instagram', '1.7778': 'Historias', '0': 'La de la foto' }[v] })), String(S.ratio), v => { S.ratio = +v; saveS(); renderEstOpts(); refresh(1, true); setTimeout(thumbsFrames, 200); });
-    $('#oText').onclick = () => { S.ts = S.ts === 1 ? 1.15 : S.ts > 1 ? .88 : 1; saveS(); renderEstOpts(); drawStage(); };
+    $('#oRatio').onclick = () => pickList('Proporción', RATIOS.map(([v, l]) => ({ v, l, d: { '1': 'Cuadrada', '1.25': 'Para Instagram', '1.7778': 'Historias', '0': 'La de la foto' }[v] })), String(S.ratio), v => { S.ratio = +v; renderEstOpts(); refresh(1, true); setTimeout(thumbsFrames, 200); pushH(); });
+    $('#oText').onclick = () => pickList('Tamaño de los datos', TSIZES.map(([v, l]) => ({ v: String(v), l })), String((TSIZES.find(t => Math.abs(t[0] - S.ts) < .01) || TSIZES[1])[0]), v => { S.ts = +v; saveS(); renderEstOpts(); drawStage(); thumbsFrames(); });
     $('#oLogo').onclick = () => { S.showLogo = !S.showLogo; saveS(); renderEstOpts(); drawStage(); thumbsFrames(); };
     $('#oRec').onclick = () => saveRecipe();
   }
   // películas
-  let filmJob = 0;
+  let filmJob = 0, filmCat = 'all';
+  function renderCats() {
+    const el = $('#filmCats'); el.innerHTML = MetaImg.CATS.map(([k, l]) => `<button class="chip sm tap ${k === filmCat ? 'on' : ''}" data-c="${k}">${l}</button>`).join('');
+    $$('button', el).forEach(b => b.onclick = () => { filmCat = b.dataset.c; renderCats(); thumbsFilm(true); $('#filmStrip').scrollLeft = 0; });
+  }
   function thumbsFilm(rebuild) {
     const strip = $('#filmStrip');
     if (rebuild || !strip.children.length) {
-      strip.innerHTML = FILMS.map(f => `<button class="film-it tap ${f.id === S.film ? 'on' : ''}" data-id="${f.id}"><div class="sw"></div><span>${esc(f.name)}</span></button>`).join('');
-      $$('.film-it', strip).forEach(b => b.onclick = () => { S.film = b.dataset.id; if (S.film !== 'none' && S.filmAmt === 0) S.filmAmt = 100; saveS(); $$('.film-it', strip).forEach(x => x.classList.toggle('on', x === b)); renderFilmCap(); rulerFilm.set(S.filmAmt); refresh(1); });
-      const job = ++filmJob; const base = MetaImg.crop(PH.img, 1, 160); let i = 0;
-      const step = () => { if (job !== filmJob || i >= FILMS.length) return; const c = document.createElement('canvas'); c.width = base.width; c.height = base.height; c.getContext('2d').drawImage(base, 0, 0); MetaImg.process(c, { film: FILMS[i].id, filmAmt: 100, adj: {} }); strip.children[i].firstChild.appendChild(c); i++; setTimeout(step, 10); };
+      const list = FILMS.filter(f => f.id === 'none' || filmCat === 'all' || f.cat === filmCat);
+      strip.innerHTML = list.map(f => `<button class="film-it tap ${f.id === S.film ? 'on' : ''}" data-id="${f.id}"><div class="sw"></div><span>${esc(f.name)}</span></button>`).join('');
+      $$('.film-it', strip).forEach(b => b.onclick = () => { S.film = b.dataset.id; if (S.film !== 'none' && S.filmAmt === 0) S.filmAmt = 100; $$('.film-it', strip).forEach(x => x.classList.toggle('on', x === b)); renderFilmCap(); rulerFilm.sync(); refresh(1); pushH(); });
+      const job = ++filmJob; const base = MetaImg.crop(PH.img, 1, 150); let i = 0;
+      const step = () => { if (job !== filmJob || i >= list.length) return; const c = document.createElement('canvas'); c.width = base.width; c.height = base.height; c.getContext('2d').drawImage(base, 0, 0); MetaImg.process(c, { film: list[i].id, filmAmt: 100, adj: {} }); strip.children[i].firstChild.appendChild(c); i++; setTimeout(step, 10); };
       step();
     } else $$('.film-it', strip).forEach(x => x.classList.toggle('on', x.dataset.id === S.film));
   }
-  function renderFilmCap() { const f = FILMS.find(x => x.id === S.film) || FILMS[0]; $('#filmCap').innerHTML = `<span><b>${esc(f.name)}</b>, ${esc(f.desc.toLowerCase())}</span><span>${S.film === 'none' ? '' : 'Intensidad ' + S.filmAmt + ' %'}</span>`; $('#rulerFilm').style.opacity = S.film === 'none' ? .3 : 1; $('#rulerFilm').style.pointerEvents = S.film === 'none' ? 'none' : ''; }
+  function renderFilmCap() { const f = FILMS.find(x => x.id === S.film) || FILMS[0]; $('#filmCap').innerHTML = `<span><b>${esc(f.name)}</b>. ${esc(f.desc)}</span>`; $('#rulerFilm').style.opacity = S.film === 'none' ? .3 : 1; $('#rulerFilm').style.pointerEvents = S.film === 'none' ? 'none' : ''; }
 
-  // regla deslizable
-  function ruler(el, { min, max, get, set, label, step = 1 }) {
+  // regla deslizable. Doble toque: vuelve al valor de reposo
+  function ruler(el, { min, max, get, set, label, step = 1, rest = 0 }) {
     el.innerHTML = '<div class="tk"></div><i class="nd"></i><div class="lab"></div>';
     const tk = $('.tk', el), lab = $('.lab', el), PX = 8; let cfg = { min, max };
-    const build = () => { let h = ''; for (let v = cfg.min; v <= cfg.max; v += 5) h += `<i class="${v === 0 ? 'z' : v % 25 === 0 ? 'l' : ''}"></i>`; tk.innerHTML = h; };
+    const build = () => { let h = ''; for (let v = cfg.min; v <= cfg.max; v += 5) h += `<i class="${v === rest ? 'z' : v % 25 === 0 ? 'l' : ''}"></i>`; tk.innerHTML = h; };
     const pos = v => { tk.style.transform = `translateX(${-(v - cfg.min) / 5 * PX}px)`; lab.textContent = label(v); };
     build();
-    let x0 = null, v0 = 0, last = 0;
-    el.addEventListener('pointerdown', e => { x0 = e.clientX; v0 = get(); el.setPointerCapture(e.pointerId); tk.style.transition = 'none'; });
-    el.addEventListener('pointermove', e => { if (x0 == null) return; let v = Math.round((v0 - (e.clientX - x0) / PX * 5 / 2.2) / step) * step; v = Math.max(cfg.min, Math.min(cfg.max, v)); if (v !== last) { last = v; set(v, true); pos(v); } });
-    const up = () => { if (x0 == null) return; x0 = null; tk.style.transition = 'transform .35s var(--entrar)'; set(get(), false); };
+    let x0 = null, v0 = 0, last = 0, moved = 0, lastTap = 0;
+    el.addEventListener('pointerdown', e => { x0 = e.clientX; v0 = get(); last = v0; moved = 0; try { el.setPointerCapture(e.pointerId); } catch (x) { } tk.style.transition = 'none'; });
+    el.addEventListener('pointermove', e => { if (x0 == null) return; moved = Math.max(moved, Math.abs(e.clientX - x0)); let v = Math.round((v0 - (e.clientX - x0) / PX * 5 / 2.2) / step) * step; v = Math.max(cfg.min, Math.min(cfg.max, v)); if (v !== last) { last = v; set(v, true); pos(v); } });
+    const up = () => {
+      if (x0 == null) return; x0 = null; tk.style.transition = 'transform .35s var(--entrar)';
+      if (moved < 5) { const now = Date.now(); if (now - lastTap < 380) { const z = Math.max(cfg.min, Math.min(cfg.max, rest)); set(z, false); pos(z); lastTap = 0; return; } lastTap = now; return; }
+      set(get(), false);
+    };
     el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
-    el.addEventListener('dblclick', () => { const z = Math.max(cfg.min, Math.min(cfg.max, 0)); set(z, false); pos(z); });
-    return { sync() { pos(get()); }, set(v) { pos(v); }, range(a, b) { cfg = { min: a, max: b }; build(); pos(get()); } };
+    return { sync() { pos(get()); }, range(a, b) { cfg = { min: a, max: b }; build(); pos(get()); } };
   }
-  const rulerFilm = ruler($('#rulerFilm'), { min: 0, max: 100, get: () => S.filmAmt, label: v => 'Intensidad ' + v + ' %', set: (v, live) => { S.filmAmt = v; renderFilmCap(); refresh(live ? .5 : 1); if (!live) saveS(); } });
-  let adjOn = 'bri';
-  const ADJ_IC = { bri: 'sun', con: 'contrast', sat: 'drop', tem: 'temp', tin: 'tint', sha: 'shadow', gra: 'grain', vig: 'vig' };
+  const rulerFilm = ruler($('#rulerFilm'), { min: 0, max: 100, rest: 100, get: () => S.filmAmt, label: v => 'Intensidad ' + v + ' %', set: (v, live) => { S.filmAmt = v; refresh(live ? .5 : 1); if (!live) pushH(); } });
+  let adjOn = 'exp', adjTap = 0;
+  const ADJ_IC = { exp: 'expo', bri: 'sun', con: 'contrast', hil: 'hil', sha: 'shadow', whi: 'whi', bla: 'bla', sat: 'drop', vib: 'vib', tem: 'temp', tin: 'tint', spl: 'split2', cla: 'cla', shp: 'shp', fad: 'fad', gra: 'grain', vig: 'vig', blu: 'blu' };
+  const sgn = v => (v > 0 ? '+' : '') + v;
+  function setAdj(id, v, live) { S.adj = Object.assign({}, S.adj); if (v) S.adj[id] = v; else delete S.adj[id]; const b = $(`.adj[data-id="${id}"] .v`); if (b) { b.textContent = sgn(v); b.classList.toggle('show', !!v); } refresh(live ? .5 : 1); if (!live) pushH(); }
   function renderAdj() {
     const row = $('#adjRow');
-    row.innerHTML = ADJ.map(a => `<button class="adj tap ${a.id === adjOn ? 'on' : ''}" data-id="${a.id}"><span class="v ${S.adj[a.id] ? 'show' : ''}">${S.adj[a.id] > 0 ? '+' : ''}${S.adj[a.id] || 0}</span><span class="c">${ic(ADJ_IC[a.id], 19)}</span>${a.name}</button>`).join('');
-    $$('.adj', row).forEach(b => b.onclick = () => { adjOn = b.dataset.id; $$('.adj', row).forEach(x => x.classList.toggle('on', x === b)); const a = ADJ.find(x => x.id === adjOn); rulerAdj.range(a.min, a.max); });
+    row.innerHTML = ADJ.map(a => `<button class="adj tap ${a.id === adjOn ? 'on' : ''}" data-id="${a.id}"><span class="c">${ic(ADJ_IC[a.id], 19)}<span class="v ${S.adj[a.id] ? 'show' : ''}">${sgn(S.adj[a.id] || 0)}</span></span><span class="n">${a.name}</span></button>`).join('');
+    $$('.adj', row).forEach(b => b.onclick = () => {
+      const now = Date.now(), id = b.dataset.id;
+      if (adjOn === id && now - adjTap < 400) { adjTap = 0; if (S.adj[id]) { setAdj(id, 0, false); rulerAdj.sync(); toast(ADJ.find(x => x.id === id).name + ' a 0'); } return; }
+      adjTap = now; adjOn = id; $$('.adj', row).forEach(x => x.classList.toggle('on', x === b)); const a = ADJ.find(x => x.id === adjOn); rulerAdj.range(a.min, a.max);
+    });
     const a = ADJ.find(x => x.id === adjOn); rulerAdj.range(a.min, a.max);
   }
-  const rulerAdj = ruler($('#rulerAdj'), {
-    min: -100, max: 100, get: () => S.adj[adjOn] || 0, label: v => (ADJ.find(a => a.id === adjOn).name) + ' ' + (v > 0 ? '+' : '') + v,
-    set: (v, live) => { S.adj = Object.assign({}, S.adj, { [adjOn]: v }); const b = $(`.adj[data-id="${adjOn}"] .v`); if (b) { b.textContent = (v > 0 ? '+' : '') + v; b.classList.toggle('show', !!v); } refresh(live ? .5 : 1); if (!live) saveS(); }
-  });
+  const rulerAdj = ruler($('#rulerAdj'), { min: -100, max: 100, get: () => S.adj[adjOn] || 0, label: v => (ADJ.find(a => a.id === adjOn).name) + ' ' + sgn(v), set: (v, live) => setAdj(adjOn, v, live) });
 
   // datos
   const FIELDS = [
@@ -350,7 +391,8 @@
     return { cam: R.cam, lens: R.lens, mmN: d.mm, fn: d.f, sv: d.s, isoN: d.iso, dt: d.date, time: d.time, place: R.place, gps: d.gps, sign: R.sign ? '© ' + R.sign : '', title: R.title, note: R.note }[k] || '';
   }
   function renderDatos() {
-    const el = $('#dList');
+    const el = $('#dList'), R = PH.R;
+    $('#dStat').innerHTML = R.read ? `<b>Leídos de la foto: ${R.read} de 7 datos.</b> Toca uno para cambiarlo; el interruptor lo muestra u oculta.` : `<b>Esta foto ha llegado sin datos de cámara</b> (editada en otra app o compartida).${R.camDefault ? ' Se usa tu cámara de Ajustes.' : ''} Puedes escribirlos tocando cada uno.`;
     el.innerHTML = FIELDS.map(([k, l]) => { const v = showVal(k), on = PH.on[k] !== false; return `<div class="drow ${on ? '' : 'off'}" data-k="${k}"><div class="t tap soft"><small>${l}</small><b class="${v ? '' : 'empty'}">${esc(v || 'Añadir')}</b></div><button class="tog ${on ? 'on' : ''}" aria-label="Mostrar ${l}"><i></i></button></div>`; }).join('');
     $$('.drow', el).forEach(r => {
       const k = r.dataset.k;
@@ -359,15 +401,15 @@
     });
   }
   function editField(k) {
-    const R = PH.R, gear = LS.get('gear', { cams: [], lenses: [] }), dt = R.dt ? new Date(R.dt) : new Date();
+    const R = PH.R, dt = R.dt ? new Date(R.dt) : new Date();
     const done = () => { renderDatos(); drawStage(); };
     const L = FIELDS.find(f => f[0] === k)[1];
-    if (k === 'cam') askText(L, R.cam, v => { R.cam = v; done(); }, { sugg: gear.cams.map(c => c.name) });
-    else if (k === 'lens') askText(L, R.lens, v => { R.lens = v; done(); }, { sugg: gear.lenses.map(c => c.name) });
-    else if (k === 'mmN') askText('Focal (mm)', R.mmN, v => { R.mmN = v.replace(/[^\d.,]/g, ''); done(); }, { mode: 'decimal', sugg: ['24', '28', '35', '50', '85'] });
-    else if (k === 'fn') askText('Apertura (f/)', R.fn, v => { R.fn = v.replace(/[^\d.,]/g, '').replace('.', ','); done(); }, { mode: 'decimal', sugg: ['1,4', '2', '2,8', '4', '5,6', '8'] });
+    if (k === 'cam') askText(L, R.cam, v => { R.cam = v; R.make = /iphone|ipad/i.test(v) ? 'Apple' : (v.split(' ')[0] || ''); done(); });
+    else if (k === 'lens') askText(L, R.lens, v => { R.lens = v; done(); });
+    else if (k === 'mmN') askText('Focal (mm)', R.mmN, v => { R.mmN = v.replace(/[^\d.,]/g, ''); done(); }, { mode: 'decimal', sugg: ['13', '26', '77'] });
+    else if (k === 'fn') askText('Apertura (f/)', R.fn, v => { R.fn = v.replace(/[^\d.,]/g, '').replace('.', ','); done(); }, { mode: 'decimal', sugg: ['1,5', '1,8', '2,8'] });
     else if (k === 'sv') askText('Velocidad', R.sv, v => { R.sv = v.replace(/\s*s$/, ''); done(); }, { sugg: ['1/30', '1/60', '1/125', '1/250', '1/500'], sub: 'Escribe por ejemplo 1/250, o 2" para dos segundos' });
-    else if (k === 'isoN') askText('ISO', R.isoN, v => { R.isoN = v.replace(/\D/g, ''); done(); }, { mode: 'numeric', sugg: ['100', '200', '400', '800'] });
+    else if (k === 'isoN') askText('ISO', R.isoN, v => { R.isoN = v.replace(/\D/g, ''); done(); }, { mode: 'numeric', sugg: ['50', '100', '400', '800'] });
     else if (k === 'dt') askText('Fecha', `${dt.getFullYear()}-${n2(dt.getMonth() + 1)}-${n2(dt.getDate())}`, v => { if (!v) return; const [y, m, dd] = v.split('-').map(Number); const n = R.dt ? new Date(R.dt) : new Date(); n.setFullYear(y, m - 1, dd); R.dt = n.toISOString(); done(); }, { type: 'date' });
     else if (k === 'time') askText('Hora', `${n2(dt.getHours())}:${n2(dt.getMinutes())}`, v => { if (!v) return; const [h, m] = v.split(':').map(Number); const n = R.dt ? new Date(R.dt) : new Date(); n.setHours(h, m, 0); R.dt = n.toISOString(); done(); }, { type: 'time' });
     else if (k === 'place') askText(L, R.place, v => { R.place = v; done(); }, { sub: R.lat != null ? 'Buscado a partir de las coordenadas de la foto' : 'Esta foto no trae ubicación' });
@@ -376,17 +418,20 @@
     else if (k === 'title') askText('Título', R.title, v => { R.title = v; done(); }, { sub: 'Usa / para elegir dónde se parte en dos líneas' });
     else if (k === 'note') askText('Nota', R.note, v => { R.note = v; done(); }, { sub: 'Se escribe en cursiva en el marco Instantánea' });
   }
-  $('#btnGear').onclick = () => {
-    const g = LS.get('gear', { cams: [], lenses: [] });
-    if (!g.cams.length && !g.lenses.length) { toast('Añade tu cámara en Mi equipo, desde Inicio'); return; }
-    const opts = [...g.cams.map((c, i) => ({ v: 'c' + i, l: c.name, d: 'Cámara' })), ...g.lenses.map((c, i) => ({ v: 'l' + i, l: c.name, d: J([c.mm ? c.mm + ' mm' : '', c.f ? 'f/' + c.f : '']) || 'Objetivo' }))];
-    pickList('Rellenar con Mi equipo', opts, '', v => { const i = +v.slice(1); if (v[0] === 'c') { PH.R.cam = g.cams[i].name; PH.R.make = g.cams[i].name.split(' ')[0]; } else { const l = g.lenses[i]; PH.R.lens = l.name; if (l.mm) PH.R.mmN = String(l.mm); } renderDatos(); drawStage(); });
-  };
+
+  // elegir marco viéndolo (con una foto de muestra)
+  function pickFrame(title, cur, img, R, theme, cb) {
+    const sh = sheet(`<h3>${esc(title)}</h3><div class="body"><div class="fgrid">${FR.map(f => `<button class="fcell tap ${f.id === cur ? 'on' : ''}" data-id="${f.id}"><div class="th"></div><span>${esc(f.name)}</span></button>`).join('')}</div></div>`);
+    const Pt = MetaImg.crop(img, 0, 360), d = frameData(R, { place: true }); d.pal = MetaImg.palette(Pt); d.palN = d.pal.map(MetaImg.colorName);
+    const o = { theme, ts: S.ts, showLogo: S.showLogo, logos: LOGOS, customLogo: CUSTOM, blur: MetaImg.blurred(Pt) };
+    const cells = $$('.fcell', sh); let i = 0; const step = () => { if (i >= FR.length || !sh.classList.contains('on')) return; cells[i].firstChild.appendChild(MetaFrames.render(FR[i], Pt, d, o, 200)); i++; setTimeout(step, 6); }; setTimeout(step, 250);
+    cells.forEach(b => b.onclick = () => { cells.forEach(x => x.classList.toggle('on', x === b)); setTimeout(() => { closeSheet(); cb(b.dataset.id); }, 160); });
+  }
 
   // ------------------------------------------------------------ exportar
   function outSizes() { return [[1080, '1080'], [2160, '2160'], [3240, 'Máximo']]; }
   async function renderFull(img, R, on, st, frameId, theme, size) {
-    const r = ratioOf(st.ratio); const P = MetaImg.crop(img, r, 4032); MetaImg.process(P, st);
+    const r = ratioOf(st.ratio); const P = MetaImg.crop(img, r, 3024); MetaImg.process(P, st);
     const f = FR.find(x => x.id === frameId) || FR[0];
     const d = frameData(R, on); d.pal = MetaImg.palette(P); d.palN = d.pal.map(MetaImg.colorName);
     const o = { theme, ts: st.ts, showLogo: st.showLogo, logos: LOGOS, customLogo: CUSTOM, blur: MetaImg.blurred(P) };
@@ -442,7 +487,6 @@
   const TOOLS = {
     fotometro: { name: 'Fotómetro', sub: 'Mide la luz', icon: 'meter', open: toolMeter },
     carretes: { name: 'Carretes', sub: 'Rollos y tomas', icon: 'book', open: toolRolls },
-    equipo: { name: 'Mi equipo', sub: 'Cámaras y ópticas', icon: 'cam', open: toolGear },
     carrusel: { name: 'Carrusel', sub: 'Una foto en varias', icon: 'split', open: toolCarousel },
     composicion: { name: 'Composición', sub: 'Varias en una', icon: 'layout', open: toolCompose },
     lote: { name: 'Lote', sub: 'Varias a la vez', icon: 'stack', open: toolBatch, isNew: true },
@@ -458,8 +502,8 @@
     const v = toolView(false); let items = []; const st = { frame: S.frame, theme: S.theme, film: S.film, recipe: null };
     const draw = () => {
       const f = FR.find(x => x.id === st.frame), film = FILMS.find(x => x.id === st.film), sel = items.filter(i => i.on);
-      v.innerHTML = hdr('Lote') + `<div class="scroll"><div class="wrap"><p class="intro-t">El mismo marco y la misma película para varias fotos. Cada una con sus propios datos.</p>
-        ${items.length ? `<div class="grid3">${items.map((it, i) => `<button class="thumb tap ${it.on ? '' : 'off'}" data-i="${i}" style="animation-delay:${i * 40}ms"><img src="${it.url}"><span class="ck">${ic('check', 14, 3)}</span></button>`).join('')}</div>
+      v.innerHTML = hdr('Lote') + `<div class="scroll"><div class="wrap"><p class="intro-t">El mismo marco y la misma película para varias fotos. Cada una lleva sus propios datos, leídos de la foto.</p>
+        ${items.length ? `<div class="grid3">${items.map((it, i) => `<button class="thumb tap ${it.on ? '' : 'off'}" data-i="${i}" style="animation-delay:${i * 40}ms"><img src="${it.url}"><span class="ck">${ic('check', 14, 3)}</span><span class="tg ${it.R.read ? 'ok' : ''}">${it.R.read ? 'Con datos' : 'Sin datos'}</span></button>`).join('')}</div>
         <button class="btn ghost tap" id="bAdd" style="margin-top:12px">${ic('plus', 18)}Añadir más fotos</button>` : `<div class="empty-st"><div class="ico">${ic('stack', 28)}</div>Elige las fotos que quieras enmarcar a la vez.</div>`}
         <div class="glab">Estilo para todas</div><div class="group">
           <button class="row tap soft" id="bRec"><div class="t"><b>Receta</b></div><span class="v">${st.recipe ? esc(st.recipe.name) : 'Ninguna'}</span><span class="chev">${ic('chev', 18)}</span></button>
@@ -469,9 +513,9 @@
         </div></div></div>
         <div class="bottom"><div class="prog" id="bProg"><i></i></div>${items.length ? `<button class="btn tap" id="bGo" ${sel.length ? '' : 'disabled'}>Exportar ${sel.length} foto${sel.length === 1 ? '' : 's'}</button>` : `<button class="btn tap" id="bPick">Elegir fotos</button>`}</div>`;
       $$('.thumb', v).forEach(t => t.onclick = () => { items[+t.dataset.i].on = !items[+t.dataset.i].on; t.classList.toggle('off'); const n = items.filter(i => i.on).length; const g = $('#bGo', v); g.textContent = `Exportar ${n} foto${n === 1 ? '' : 's'}`; g.disabled = !n; });
-      const add = async () => { const fs = await pickMany(); if (!fs.length) return; toast('Preparando miniaturas…', true); for (const f of fs) { try { const t = await thumbURL(f, 260); items.push({ file: f, url: t.url, on: true }); } catch (e) { } } $('#toast').classList.remove('on'); draw(); };
+      const add = async () => { const fs = await pickMany(); if (!fs.length) return; toast('Preparando miniaturas…', true); for (const f of fs) { try { const t = await thumbURL(f, 260); items.push({ file: f, url: t.url, on: true, img: t.p.img, R: rawOf(t.p.ex, f, t.p.img) }); } catch (e) { } } $('#toast').classList.remove('on'); draw(); };
       $('#bPick', v) && ($('#bPick', v).onclick = add); $('#bAdd', v) && ($('#bAdd', v).onclick = add);
-      $('#bFr', v).onclick = () => pickList('Marco', FR.map(x => ({ v: x.id, l: x.name, d: x.desc })), st.frame, x => { st.frame = x; st.recipe = null; draw(); });
+      $('#bFr', v).onclick = () => { const cb = x => { st.frame = x; st.recipe = null; draw(); }; if (items.length) pickFrame('Marco', st.frame, items[0].img, items[0].R, st.theme, cb); else pickList('Marco', FR.map(x => ({ v: x.id, l: x.name, d: x.desc })), st.frame, cb); };
       $('#bTh', v).onclick = () => pickList('Tema', [{ v: 'claro', l: 'Claro' }, { v: 'oscuro', l: 'Oscuro' }], st.theme, x => { st.theme = x; draw(); });
       $('#bFi', v).onclick = () => pickList('Película', FILMS.map(x => ({ v: x.id, l: x.name, d: x.desc })), st.film, x => { st.film = x; st.recipe = null; draw(); });
       $('#bRec', v).onclick = () => { const R = LS.get('recipes', []); if (!R.length) return toast('Todavía no tienes recetas'); pickList('Receta', [{ v: '', l: 'Ninguna' }, ...R.map(r => ({ v: String(r.id), l: r.name }))], st.recipe ? String(st.recipe.id) : '', x => { st.recipe = R.find(r => String(r.id) === x) || null; if (st.recipe) { st.frame = st.recipe.frame; st.theme = st.recipe.theme; st.film = st.recipe.film; } draw(); }); };
@@ -480,7 +524,7 @@
         const base = st.recipe ? st.recipe : { film: st.film, filmAmt: 100, adj: {}, ratio: 0, ts: S.ts, showLogo: S.showLogo };
         for (let k = 0; k < list.length; k++) {
           go.textContent = `Preparando ${k + 1} de ${list.length}…`;
-          try { const p = await readPhoto(list[k].file); const R = rawFromExif(p.ex, list[k].file, p.img); if (R.lat != null) R.place = await reverse(R.lat, R.lon);
+          try { const p = await readPhoto(list[k].file); const R = rawOf(p.ex, list[k].file, p.img); if (R.lat != null) R.place = await reverse(R.lat, R.lon);
             const c = await renderFull(p.img, R, { place: true }, Object.assign({}, base, { film: st.film }), st.frame, st.theme, S.size);
             const blob = await toBlob(c); out.push(new File([blob], `${baseName(list[k].file.name)}_metadat.jpg`, { type: 'image/jpeg' })); URL.revokeObjectURL(p.url);
           } catch (e) { console.error(e); }
@@ -497,7 +541,7 @@
   function toolPrivacy() {
     const v = toolView(false); let P = null;
     const draw = () => {
-      if (!P) { v.innerHTML = hdr('Privacidad') + `<div class="scroll"><div class="wrap"><p class="intro-t">Mira qué dice una foto de ti antes de compartirla: dónde estabas, con qué móvil, a qué hora. Y crea una copia limpia, sin nada de eso.</p><div class="empty-st"><div class="ico">${ic('shield', 28)}</div>La foto no sale de tu móvil.</div></div></div><div class="bottom"><button class="btn tap" id="pPick">Elegir una foto</button></div>`; $('#pPick', v).onclick = async () => { const f = await pickOne(); if (!f) return; const p = await readPhoto(f); const R = rawFromExif(p.ex, f, p.img); P = { f, p, R }; draw(); if (R.lat != null) reverse(R.lat, R.lon).then(pl => { if (pl) { R.place = pl; draw(); } }); }; return; }
+      if (!P) { v.innerHTML = hdr('Privacidad') + `<div class="scroll"><div class="wrap"><p class="intro-t">Mira qué dice una foto de ti antes de compartirla: dónde estabas, con qué móvil, a qué hora. Y crea una copia limpia, sin nada de eso.</p><div class="empty-st"><div class="ico">${ic('shield', 28)}</div>La foto no sale de tu móvil.</div></div></div><div class="bottom"><button class="btn tap" id="pPick">Elegir una foto</button></div>`; $('#pPick', v).onclick = async () => { const f = await pickOne(); if (!f) return; const p = await readPhoto(f); const R = rawOf(p.ex, f, p.img); P = { f, p, R }; draw(); if (R.lat != null) reverse(R.lat, R.lon).then(pl => { if (pl) { R.place = pl; draw(); } }); }; return; }
       const { R, p } = P, d = frameData(R, {}), ex = p.ex;
       const items = [
         ['Ubicación', R.lat != null ? J([R.place, d.gps]) : '', 'pin'], ['Dispositivo', J([R.cam, R.lens]), 'cam'], ['Fecha y hora', d.dlong ? cap1(d.dlong) + ', ' + d.time : '', 'book'],
@@ -598,7 +642,7 @@
     draw(); show(v.id);
   }
   function newRoll(cb) {
-    const g = LS.get('gear', { cams: [], lenses: [] });
+    const g = { cams: S.defCam ? [{ name: S.defCam }] : [] };
     const sh = sheet(`<h3>Nuevo carrete</h3><div class="sub">Película, sensibilidad y cámara.</div>
       <input class="field" id="nf" placeholder="Película, por ejemplo Plata 400"><input class="field" id="ni" inputmode="numeric" placeholder="ISO, por ejemplo 400"><input class="field" id="nc" placeholder="Cámara" value="${esc(g.cams[0]?.name || '')}">
       <div class="acts"><button class="btn tap" id="nOk">Crear carrete</button></div>`);
@@ -621,25 +665,6 @@
       $('#rDel', v).onclick = () => confirmSheet('¿Borrar este carrete?', 'Se borran también sus tomas. No se puede deshacer.', 'Borrar carrete', () => { LS.set('rolls', R.filter(x => x.id !== id)); back(); setTimeout(onBack, 450); });
     };
     v._onLeave = () => setTimeout(onBack, 50);
-    draw(); show(v.id);
-  }
-
-  // Mi equipo
-  function toolGear() {
-    const v = toolView(false);
-    const draw = () => {
-      const g = LS.get('gear', { cams: [], lenses: [] });
-      const list = (arr, kind) => arr.length ? `<div class="group">${arr.map((c, i) => `<div class="row"><span style="color:var(--cian)">${ic(kind === 'cams' ? 'cam' : 'lens', 22)}</span><div class="t"><b>${esc(c.name)}</b>${kind === 'lenses' ? `<small>${esc(J([c.mm ? c.mm + ' mm' : '', c.f ? 'f/' + c.f : '']))}</small>` : ''}</div><button class="ib tap" data-del="${kind}:${i}" aria-label="Borrar">${ic('x', 18)}</button></div>`).join('')}</div>` : `<div class="group"><div class="row"><div class="t"><small>Nada todavía</small></div></div></div>`;
-      v.innerHTML = hdr('Mi equipo') + `<div class="scroll"><div class="wrap"><p class="intro-t">Guarda tus cámaras y objetivos para rellenar los datos de una foto con un toque, aunque no los traiga.</p>
-        <div class="glab">Cámaras</div>${list(g.cams, 'cams')}<button class="btn ghost tap" id="gCam" style="margin:6px 0 4px">${ic('plus', 18)}Añadir cámara</button>
-        <div class="glab">Objetivos</div>${list(g.lenses, 'lenses')}<button class="btn ghost tap" id="gLens" style="margin-top:6px">${ic('plus', 18)}Añadir objetivo</button></div></div>`;
-      $('#gCam', v).onclick = () => askText('Nueva cámara', '', n => { if (!n) return; g.cams.push({ name: n }); LS.set('gear', g); draw(); }, { placeholder: 'Por ejemplo Fujifilm X100V', sugg: ['iPhone 13 Pro'] });
-      $('#gLens', v).onclick = () => {
-        const sh = sheet(`<h3>Nuevo objetivo</h3><input class="field" id="ln" placeholder="Nombre, por ejemplo 35 mm f/2"><input class="field" id="lm" inputmode="decimal" placeholder="Focal en mm"><input class="field" id="lf" inputmode="decimal" placeholder="Apertura máxima, por ejemplo 2"><div class="acts"><button class="btn tap" id="lOk">Guardar</button></div>`);
-        $('#lOk', sh).onclick = () => { const n = $('#ln', sh).value.trim(); if (!n) return; g.lenses.push({ name: n, mm: $('#lm', sh).value.replace(/[^\d.,]/g, ''), f: $('#lf', sh).value.replace(/[^\d.,]/g, '').replace('.', ',') }); LS.set('gear', g); closeSheet(); draw(); };
-      };
-      $$('[data-del]', v).forEach(b => b.onclick = () => { const [k, i] = b.dataset.del.split(':'); g[k].splice(+i, 1); LS.set('gear', g); draw(); });
-    };
     draw(); show(v.id);
   }
 
@@ -717,30 +742,32 @@
       const f = FR.find(x => x.id === S.frame), fi = FILMS.find(x => x.id === S.film);
       v.innerHTML = hdr('Ajustes') + `<div class="scroll"><div class="wrap">
         <div class="glab">Apariencia</div><div class="group"><div class="row"><div class="t"><b>Compositor oscuro</b><small>La foto se ve mejor sobre fondo oscuro</small></div><button class="tog ${S.darkComp ? 'on' : ''}" id="aDark"><i></i></button></div></div>
-        <div class="glab">Al abrir una foto (se recuerda lo último que usaste)</div><div class="group">
+        <div class="glab">Al abrir una foto</div><div class="group">
           <button class="row tap soft" id="aFr"><div class="t"><b>Marco</b></div><span class="v">${esc(f.name)}</span><span class="chev">${ic('chev', 18)}</span></button>
           <button class="row tap soft" id="aTh"><div class="t"><b>Tema del marco</b></div><span class="v">${S.theme === 'claro' ? 'Claro' : 'Oscuro'}</span><span class="chev">${ic('chev', 18)}</span></button>
-          <button class="row tap soft" id="aFi"><div class="t"><b>Película</b></div><span class="v">${esc(fi.name)}</span><span class="chev">${ic('chev', 18)}</span></button>
-          <button class="row tap soft" id="aRa"><div class="t"><b>Proporción</b></div><span class="v">${RATIOS.find(r => r[0] == String(S.ratio))?.[1] || 'Original'}</span><span class="chev">${ic('chev', 18)}</span></button>
+          <button class="row tap soft" id="aTs"><div class="t"><b>Tamaño de los datos</b></div><span class="v">${tsName(S.ts)}</span><span class="chev">${ic('chev', 18)}</span></button>
+          <button class="row tap soft" id="aCam"><div class="t"><b>Mi cámara</b><small>Se usa solo si la foto llega sin datos</small></div><span class="v">${esc(S.defCam || 'Ninguna')}</span><span class="chev">${ic('chev', 18)}</span></button>
           <button class="row tap soft" id="aSi"><div class="t"><b>Firma</b></div><span class="v">${S.sign ? '© ' + esc(S.sign) : 'Sin firma'}</span><span class="chev">${ic('chev', 18)}</span></button>
           <div class="row"><div class="t"><b>Logo de la marca</b><small>El de tu cámara, si Metadat lo conoce</small></div><button class="tog ${S.showLogo ? 'on' : ''}" id="aLo"><i></i></button></div>
-          <button class="row tap soft" id="aCu"><div class="t"><b>Logo propio</b><small>${CUSTOM ? 'Sustituye al de la marca en todos los marcos' : 'Una imagen PNG con fondo transparente'}</small></div><span class="v">${CUSTOM ? 'Quitar' : 'Elegir'}</span><span class="chev">${ic('chev', 18)}</span></button>
+          <button class="row tap soft" id="aCuC"><div class="t"><b>Logo propio para marcos claros</b><small>PNG con fondo transparente. Si no pones ninguno, se usa la manzana</small></div><span class="v">${CUSTOM.claro ? 'Quitar' : 'Elegir'}</span><span class="chev">${ic('chev', 18)}</span></button>
+          <button class="row tap soft" id="aCuO"><div class="t"><b>Logo propio para marcos oscuros</b></div><span class="v">${CUSTOM.oscuro ? 'Quitar' : 'Elegir'}</span><span class="chev">${ic('chev', 18)}</span></button>
         </div>
         <div class="glab">Tus números</div><div class="group"><div class="row"><div class="t"><b>Fotos exportadas</b></div><span class="v disp" id="aCount" style="color:var(--haluro);font-size:20px">0</span></div></div>
         <div class="glab">Copia de seguridad</div><div class="group">
-          <button class="row tap soft" id="aBk"><div class="t"><b>Descargar copia</b><small>Ajustes, recetas, equipo y carretes</small></div><span class="chev">${ic('down', 18)}</span></button>
+          <button class="row tap soft" id="aBk"><div class="t"><b>Descargar copia</b><small>Ajustes, recetas y carretes</small></div><span class="chev">${ic('down', 18)}</span></button>
           <button class="row tap soft" id="aRs"><div class="t"><b>Restaurar una copia</b></div><span class="chev">${ic('chev', 18)}</span></button></div>
         <p class="foot">Metadat, versión ${VERSION}<br>Las fotos no salen de tu móvil. Solo se consulta el nombre del lugar a partir de las coordenadas.</p></div></div>`;
       $('#aDark', v).onclick = e => { S.darkComp = !S.darkComp; saveS(); e.currentTarget.classList.toggle('on', S.darkComp); };
       $('#aLo', v).onclick = e => { S.showLogo = !S.showLogo; saveS(); e.currentTarget.classList.toggle('on', S.showLogo); };
       $('#aFr', v).onclick = () => pickList('Marco por defecto', FR.map(x => ({ v: x.id, l: x.name, d: x.desc })), S.frame, x => { S.frame = x; saveS(); draw(); });
       $('#aTh', v).onclick = () => pickList('Tema por defecto', [{ v: 'claro', l: 'Claro' }, { v: 'oscuro', l: 'Oscuro' }], S.theme, x => { S.theme = x; saveS(); draw(); });
-      $('#aFi', v).onclick = () => pickList('Película por defecto', FILMS.map(x => ({ v: x.id, l: x.name, d: x.desc })), S.film, x => { S.film = x; saveS(); draw(); });
-      $('#aRa', v).onclick = () => pickList('Proporción por defecto', RATIOS.map(([x, l]) => ({ v: x, l })), String(S.ratio), x => { S.ratio = +x; saveS(); draw(); });
+      $('#aTs', v).onclick = () => pickList('Tamaño de los datos', TSIZES.map(([x, l]) => ({ v: String(x), l })), String((TSIZES.find(t => Math.abs(t[0] - S.ts) < .01) || TSIZES[1])[0]), x => { S.ts = +x; saveS(); draw(); });
+      $('#aCam', v).onclick = () => askText('Mi cámara', S.defCam, x => { S.defCam = x; saveS(); draw(); }, { sub: 'Solo se usa cuando la foto llega sin datos de cámara. Déjalo vacío para no usar ninguna.', sugg: ['iPhone 13 Pro'] });
       $('#aSi', v).onclick = () => askText('Tu firma', S.sign, x => { S.sign = x; saveS(); draw(); }, { placeholder: 'Tu nombre', sub: 'Aparece en los marcos Firma, Revista, Museo y otros' });
-      $('#aCu', v).onclick = async () => { if (CUSTOM) { CUSTOM = null; LS.set('customLogo', null); draw(); return; } const f = await pickOne(); if (!f) return; const p = await readPhoto(f); const c = document.createElement('canvas'); const k = Math.min(1, 400 / p.img.naturalHeight); c.width = p.img.naturalWidth * k; c.height = p.img.naturalHeight * k; c.getContext('2d').drawImage(p.img, 0, 0, c.width, c.height); const url = c.toDataURL('image/png'); LS.set('customLogo', url); CUSTOM = await loadImg(url); draw(); toast('Logo propio guardado'); };
-      $('#aBk', v).onclick = async () => { const data = { app: 'metadat', version: VERSION, settings: S, recipes: LS.get('recipes', []), gear: LS.get('gear', {}), rolls: LS.get('rolls', []), count: COUNT }; const d = new Date(); await shareFiles([new File([JSON.stringify(data, null, 1)], `metadat_copia_${d.getFullYear()}-${n2(d.getMonth() + 1)}-${n2(d.getDate())}.json`, { type: 'application/json' })]); };
-      $('#aRs', v).onclick = () => { const i = $('#fileAny'); i.value = ''; i.onchange = async () => { try { const j = JSON.parse(await i.files[0].text()); if (j.app !== 'metadat') throw 0; Object.assign(S, j.settings || {}); saveS(); LS.set('recipes', j.recipes || []); LS.set('gear', j.gear || { cams: [], lenses: [] }); LS.set('rolls', j.rolls || []); COUNT = j.count || COUNT; LS.set('count', COUNT); draw(); toast('Copia restaurada'); } catch (e) { toast('Ese archivo no es una copia de Metadat'); } }; i.click(); };
+      const setLogo = k => async () => { if (CUSTOM[k]) { CUSTOM[k] = null; LS.set('logo_' + k, null); draw(); return; } const f = await pickOne(); if (!f) return; const p = await readPhoto(f); const c = document.createElement('canvas'); const kk = Math.min(1, 400 / p.img.naturalHeight); c.width = p.img.naturalWidth * kk; c.height = p.img.naturalHeight * kk; c.getContext('2d').drawImage(p.img, 0, 0, c.width, c.height); const url = c.toDataURL('image/png'); LS.set('logo_' + k, url); CUSTOM[k] = await loadImg(url); draw(); toast('Logo guardado'); };
+      $('#aCuC', v).onclick = setLogo('claro'); $('#aCuO', v).onclick = setLogo('oscuro');
+      $('#aBk', v).onclick = async () => { const data = { app: 'metadat', version: VERSION, settings: S, recipes: LS.get('recipes', []), rolls: LS.get('rolls', []), count: COUNT }; const d = new Date(); await shareFiles([new File([JSON.stringify(data, null, 1)], `metadat_copia_${d.getFullYear()}-${n2(d.getMonth() + 1)}-${n2(d.getDate())}.json`, { type: 'application/json' })]); };
+      $('#aRs', v).onclick = () => { const i = $('#fileAny'); i.value = ''; i.onchange = async () => { try { const j = JSON.parse(await i.files[0].text()); if (j.app !== 'metadat') throw 0; Object.assign(S, j.settings || {}); saveS(); LS.set('recipes', j.recipes || []); LS.set('rolls', j.rolls || []); COUNT = j.count || COUNT; LS.set('count', COUNT); draw(); toast('Copia restaurada'); } catch (e) { toast('Ese archivo no es una copia de Metadat'); } }; i.click(); };
       countUp($('#aCount', v), COUNT);
     };
     draw(); show(v.id);
@@ -761,7 +788,7 @@
       <div class="tools">${Object.entries(TOOLS).filter(([, t]) => !t.hidden).map(([k, t]) => `<button class="tool tap" data-go="${k}"><span class="ti">${ic(t.icon, 20)}</span><span><b>${t.name}</b><small>${t.sub}</small></span>${t.isNew ? '<i class="new"></i>' : ''}</button>`).join('')}</div>
       <p class="foot">${COUNT ? `Has exportado ${COUNT} foto${COUNT === 1 ? '' : 's'}. ` : ''}El punto azul marca lo nuevo.</p></div>`;
     if (renderHome.done) { b.firstElementChild.classList.remove('stagger'); }
-    else { $$('.stagger > *', b).forEach((e, i) => e.style.animationDelay = (i * 70) + 'ms'); $$('.tool', b).forEach((e, i) => { e.style.opacity = 0; e.style.transform = 'translateY(10px)'; e.style.animation = `up .55s var(--entrar) ${200 + i * 45}ms forwards`; }); }
+    else { const d0 = $('#intro') && !RM && !window.__metadatSinIntro ? 1500 : 0; $$('.stagger > *', b).forEach((e, i) => e.style.animationDelay = (d0 + i * 70) + 'ms'); $$('.tool', b).forEach((e, i) => { e.style.opacity = 0; e.style.transform = 'translateY(10px)'; e.style.animation = `up .55s var(--entrar) ${d0 + 200 + i * 45}ms forwards`; }); }
     renderHome.done = true;
     $('#hPick').onclick = async () => { const f = await pickOne(); if (f) openComposer(f); };
     const hl = $('#hLast'); if (hl) hl.onclick = async () => { const f = await DB.get('lastFile'); if (f) openComposer(f); else { toast('Ya no está guardada. Elígela otra vez'); const ff = await pickOne(); if (ff) openComposer(ff); } };
@@ -770,11 +797,25 @@
   // ------------------------------------------------------------ arranque
   fillIcons();
   function intro() {
-    const el = $('#intro'), w = $('#introW');
+    const el = $('#intro');
+    if (!el) return;
     if (RM || window.__metadatSinIntro) { el.remove(); return; }
-    w.innerHTML = 'metadat'.split('').map((c, i) => `<span style="animation-delay:${.25 + i * .06}s">${c}</span>`).join('');
-    const end = () => { if (!el.isConnected) return; el.classList.add('bye'); setTimeout(() => el.remove(), 700); };
-    setTimeout(end, 2300); el.onclick = end;
+    const w = $('#introW'), ex = $('#introEx');
+    w.insertAdjacentHTML('afterbegin', 'metadat'.split('').map((c, i) => `<span class="l" style="--i:${i}">${c}</span>`).join(''));
+    w.style.marginLeft = (-w.offsetWidth / 2) + 'px';
+    ex.innerHTML = 'F/<span id="xa" style="width:2.4em"></span> ·  1/<span id="xb" style="width:3.4em"></span> ·  ISO <span id="xc" style="width:2.6em"></span>';
+    const F = ['2,8', '4', '5,6', '8', '2', '1,8'], Sx = ['60', '250', '500', '1000', '30', '125'], N = ['400', '200', '800', '1600', '64', '100']; let k = 0;
+    const t = setInterval(() => { $('#xa').textContent = k < 9 ? F[k % 5] : F[5]; $('#xb').textContent = k < 11 ? Sx[(k + 2) % 5] : Sx[5]; $('#xc').textContent = k < 13 ? N[(k + 1) % 5] : N[5]; if (++k > 14) clearInterval(t); }, 75);
+    let done = false;
+    const fly = () => {
+      if (done || !el.isConnected) return; done = true; clearInterval(t);
+      // el nombre vuela exactamente al sitio del nombre de la cabecera
+      const a = w.getBoundingClientRect(), tg = $('.home-top .word').getBoundingClientRect(), sc = 30 / 46;
+      w.style.transformOrigin = '0 0'; w.style.transition = 'transform .7s cubic-bezier(.5,0,.1,1)';
+      w.style.transform = `translate(${tg.left - a.left}px,${tg.top - a.top}px) scale(${sc})`;
+      el.classList.add('fly'); setTimeout(() => { el.classList.add('end'); setTimeout(() => el.remove(), 220); }, 760);
+    };
+    setTimeout(fly, 1650); el.onclick = fly;
   }
   document.fonts && document.fonts.load('600 30px MInterD').then(() => { }).catch(() => { });
   Promise.all(['400 16px MInter', '500 16px MInter', '600 16px MInter', '300 40px MInterD', '600 30px MInterD', '400 30px MLora', 'italic 400 30px MLoraI', '400 16px MMono'].map(f => document.fonts ? document.fonts.load(f) : 0)).catch(() => { }).finally(() => { if (C.cvs) drawStage(); });

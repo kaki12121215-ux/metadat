@@ -57,9 +57,10 @@
     }
     logoImg(white) {
       const o = this.o; if (!o.showLogo) return false;
-      if (o.customLogo) return o.customLogo;
+      const wh = white === true || (white !== false && this.T.logo === 'blanco');
+      const c = o.customLogo; if (c && (c.claro || c.oscuro)) return wh ? (c.oscuro || c.claro) : (c.claro || c.oscuro);
       if (!this.d.make) return false;
-      if (/apple/i.test(this.d.make) && o.logos) { const wh = white === true || (white !== false && this.T.logo === 'blanco'); return wh ? o.logos.blanco : o.logos.negro; }
+      if (/apple|iphone|ipad/i.test(this.d.make) && o.logos && o.logos.negro) return wh ? o.logos.blanco : o.logos.negro;
       return null;
     }
   }
@@ -115,12 +116,12 @@
     });
   });
 
-  def('instantanea', 'Instantánea', 'Marco de foto instantánea, con nota a mano alzada', () => 62 + 1100 + 236, (g, d, T) => {
-    g.rect(0, 0, 1080, 2000, T.pa); g.photo(62, 62, 956, 1100, [.5, .35]); const yc = 62 + 1100 + 118;
+  def('instantanea', 'Instantánea', 'Marco de foto instantánea, con nota a mano alzada', r => 62 + ph(956, r) + 236, (g, d, T, r) => {
+    const H = ph(956, r); g.rect(0, 0, 1080, H + 400, T.pa); g.photo(62, 62, 956, H); const yc = 62 + H + 118;
     g.text(d.note || d.place || '', 68, yc, { s: 42, f: 'si', max: 560 });
     const lw = g.logoW(28); let y = yc - (lw ? 34 : 14);
     if (lw) { g.logo(1012, y, 28, undefined, 'right'); y += 38; }
-    g.text(d.cam, 1012, y, { s: 15.4, ls: 1.8, up: true, c: T.m2, al: 'right' }); g.text(EXP3(d), 1012, y + 29, { s: 15.4, ls: 1.8, up: true, c: T.m2, al: 'right' });
+    g.text(d.cam, 1012, y, { s: 15.4, ls: 1.8, up: true, c: T.m2, al: 'right', max: 400 }); g.text(EXP3(d), 1012, y + 29, { s: 15.4, ls: 1.8, up: true, c: T.m2, al: 'right', max: 400 });
   });
 
   def('minimo', 'Mínimo', 'Filo fino y una sola línea de datos', r => 24 + ph(1032, r) + 100, (g, d, T, r) => {
@@ -238,22 +239,22 @@
     g.logo(940, y + 130, 30, undefined, 'right');
   });
 
-  def('diapositiva', 'Diapositiva', 'Montura de diapositiva con rotulación', () => 70 + 86 + 940 + 120 + 70, (g, d, T) => {
-    const FH = 70 + 86 + 940 + 120 + 70; g.rect(0, 0, 1080, FH, T.back);
-    g.shadow(40, 18, T.sh, () => g.rrect(70, 70, 940, 86 + 940 + 120, 36, T.mt)); g.rrect(70, 70, 940, 86 + 940 + 120, 36, T.mt);
+  def('diapositiva', 'Diapositiva', 'Montura de diapositiva con rotulación', r => 70 + 86 + ph(800, r) + 120 + 70, (g, d, T, r) => {
+    const H = ph(800, r), FH = 70 + 86 + H + 120 + 70; g.rect(0, 0, 1080, FH, T.back);
+    g.shadow(40, 18, T.sh, () => g.rrect(70, 70, 940, 86 + H + 120, 36, T.mt)); g.rrect(70, 70, 940, 86 + H + 120, 36, T.mt);
     g.text('METADAT · 15', 140, 113, { s: 17, ls: 1.6, f: 'm', c: T.m1 }); g.text((d.stamp || '').slice(2, 10).replace(/-/g, '.'), 940, 113, { s: 17, ls: 1.6, f: 'm', c: T.m1, al: 'right' });
-    g.photo(140, 156, 800, 940, [.5, .35], 6); const yc = 156 + 940 + 60;
-    let x = 140; const lw = g.logo(x, yc, 22); x += lw ? lw + 10 : 0; g.text(d.cam.toUpperCase(), x, yc, { s: 17, ls: 1.6, f: 'm', c: T.m1 });
-    g.text(EXP3(d).toUpperCase(), 940, yc, { s: 17, ls: 1.6, f: 'm', c: T.m1, al: 'right' });
+    g.photo(140, 156, 800, H, undefined, 6); const yc = 156 + H + 60;
+    let x = 140; const lw = g.logo(x, yc, 22); x += lw ? lw + 10 : 0; g.text((d.cam || '').toUpperCase(), x, yc, { s: 17, ls: 1.6, f: 'm', c: T.m1, max: 380 });
+    g.text(EXP3(d).toUpperCase(), 940, yc, { s: 17, ls: 1.6, f: 'm', c: T.m1, al: 'right', max: 380 });
   });
 
-  def('sello', 'Sello', 'Sello postal dentado con el valor de la focal', () => 92 * 2 + 1216, (g, d, T) => {
-    g.rect(0, 0, 1080, 1400, T.back); const sx = 92, sy = 92, W = 896, H = 1216;
+  def('sello', 'Sello', 'Sello postal dentado con el valor de la focal', r => 92 * 2 + (Math.round((76 + ph(820, r) + 136) / 32) * 32), (g, d, T, r) => {
+    const sx = 92, sy = 92, W = 896, H = Math.round((76 + ph(820, r) + 136) / 32) * 32; g.rect(0, 0, 1080, H + 184, T.back);
     g.shadow(24, 10, T.sh, () => g.rect(sx, sy, W, H, T.bg)); g.rect(sx, sy, W, H, T.bg);
     for (let i = 0; i < W / 32; i++) { g.circle(sx + 16 + i * 32, sy, 9.3, T.back); g.circle(sx + 16 + i * 32, sy + H, 9.3, T.back); }
     for (let i = 0; i < H / 32; i++) { g.circle(sx, sy + 16 + i * 32, 9.3, T.back); g.circle(sx + W, sy + 16 + i * 32, 9.3, T.back); }
-    const ph2 = H - 76 - 136; g.photo(sx + 38, sy + 38, W - 76, ph2, [.5, .35]);
-    const by = sy + 38 + ph2 + 136 - 6; let ty = by - 70; if (g.logoW(24)) { g.logo(sx + 38, ty - 8, 24); }
+    const ph2 = H - 76 - 136; g.photo(sx + 38, sy + 38, W - 76, ph2);
+    const by = sy + 38 + ph2 + 136 - 6; if (g.logoW(24)) g.logo(sx + 38, by - 78, 24);
     g.text(d.place, sx + 38, by - 36, { s: 15, ls: 3.4, up: true, c: T.m1, max: 500 }); g.text(d.year, sx + 38, by - 8, { s: 15, ls: 3.4, c: T.m1 });
     const uw = g.meas('mm', { s: 18, ls: 1 }); g.text('mm', sx + W - 38, by - 4, { s: 18, ls: 1, c: T.m2, al: 'right', base: 'alphabetic' });
     g.text(d.mmN || '—', sx + W - 38 - uw - 6, by, { s: 92, f: 's', ls: -2, al: 'right', base: 'alphabetic' });
