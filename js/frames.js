@@ -39,6 +39,7 @@
       const P = this.P, X = this.x; if (!P) return;
       const k = Math.max(w / P.width, h / P.height), sw = w / k, sh = h / k;
       const sx = (P.width - sw) * pos[0], sy = (P.height - sh) * pos[1];
+      if (!this.o._ph) this.o._ph = [x, y, w, h];
       X.save(); if (r) { this.rrect(x, y, w, h, r, '#000'); X.clip(); }
       X.drawImage(P, sx, sy, sw, sh, x, y, w, h); X.restore();
     }
@@ -383,13 +384,18 @@
   // ---------------------------------------------------------------- render
   // P: foto procesada (canvas). o: {theme, ts, showLogo, logos, customLogo, blur, scale}
   function layout(frame, P) { const r = P.height / P.width; return { w: 1080, h: Math.ceil(frame.h(r)) }; }
-  function render(frame, P, d, o, outW) {
+  // into: canvas que se reutiliza (vídeo). Su alto se respeta; lo que sobre o falte es un píxel como mucho.
+  function render(frame, P, d, o, outW, into) {
     const T = THEMES[o.theme || 'claro']; const { h } = layout(frame, P); const k = outW / 1080;
-    const c = document.createElement('canvas'); c.width = Math.round(outW); c.height = Math.round(h * k);
+    const c = into || document.createElement('canvas');
+    const W = Math.round(outW), H = into ? into.height : Math.round(h * k);
+    if (c.width !== W) c.width = W; if (c.height !== H) c.height = H;
     const x = c.getContext('2d'); x.setTransform(k, 0, 0, k, 0, 0); x.imageSmoothingQuality = 'high';
-    x.fillStyle = T.bg; x.fillRect(0, 0, 1080, h);
-    const g = new G(x, T, d, P, Object.assign({ scale: k }, o));
-    frame.draw(g, d, T, P.height / P.width); return c;
+    x.fillStyle = T.bg; x.fillRect(0, 0, 1080, Math.max(h, H / k));
+    const oo = Object.assign({ scale: k }, o, { _ph: null });
+    const g = new G(x, T, d, P, oo);
+    frame.draw(g, d, T, P.height / P.width); x.setTransform(1, 0, 0, 1, 0, 0);
+    c._ph = oo._ph; return c;
   }
   window.MetaFrames = { F, THEMES, render, layout };
 })();

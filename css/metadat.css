@@ -366,3 +366,66 @@ svg{display:block}
 .fcell span{display:block;font-size:12.5px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fcell.on span{font-weight:600}
 .sheet .body{-webkit-overflow-scrolling:touch}
+
+/* ---------- 1.2.0 · vídeo y encuadre ---------- */
+[hidden]{display:none!important}
+.tabs .seg:has(#tabClip:not([hidden])){width:min(372px,calc(100vw - 28px))}
+.tabs .seg:has(#tabClip:not([hidden])) button{gap:5px;font-size:14px}
+.stage .cvw{touch-action:none}
+.stage.isvid{padding-bottom:66px}
+.stage.isvid .busy{bottom:74px}
+.vtag,.vbar{display:none}
+.stage.isvid .vtag{display:flex}
+.stage.isvid .vbar{display:flex}
+.vtag{position:absolute;left:16px;top:10px;z-index:4;gap:6px;pointer-events:none}
+.vtag b{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;padding:5px 9px;border-radius:12px;background:rgba(18,19,21,.55);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#F2F3F3}
+.vbar{position:absolute;left:18px;right:18px;bottom:12px;z-index:4;align-items:center;gap:12px;height:44px;padding:0 14px 0 6px;border-radius:22px;background:rgba(18,19,21,.62);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#F2F3F3}
+.vbar span{font-size:12.5px;font-weight:500;font-variant-numeric:tabular-nums;opacity:.85;min-width:30px;text-align:center}
+.vplay{width:34px;height:34px;border-radius:17px;display:flex;align-items:center;justify-content:center;color:#F2F3F3;flex:none}
+.vplay .pa{display:none}.vplay.on .pa{display:block}.vplay.on .pl{display:none}
+.vtr{flex:1;height:30px;position:relative;touch-action:none;cursor:pointer}
+.vtr:before{content:'';position:absolute;left:0;right:0;top:13px;height:4px;border-radius:2px;background:rgba(255,255,255,.22)}
+.vtr i{position:absolute;left:0;top:13px;height:4px;width:0;border-radius:2px;background:var(--cian)}
+.vtr u{position:absolute;top:7px;left:0;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.frov{position:absolute;z-index:3;pointer-events:none;border:1px solid rgba(255,255,255,.85);opacity:0;transition:opacity .25s var(--suave)}
+.frov.on{opacity:1}
+.frov i{position:absolute;background:rgba(255,255,255,.5)}
+.frov i:nth-child(1){left:33.33%;top:0;bottom:0;width:1px}.frov i:nth-child(2){left:66.66%;top:0;bottom:0;width:1px}
+.frov i:nth-child(3){top:33.33%;left:0;right:0;height:1px}.frov i:nth-child(4){top:66.66%;left:0;right:0;height:1px}
+.zchip{position:absolute;left:50%;top:10px;z-index:5;transform:translate(-50%,-6px);font-size:13px;font-weight:600;padding:7px 14px;border-radius:16px;background:rgba(18,19,21,.8);color:#fff;opacity:0;pointer-events:none;transition:opacity .25s var(--suave),transform .4s var(--muelle);font-variant-numeric:tabular-nums}
+.zchip.on{opacity:1;transform:translate(-50%,0)}
+/* Clip */
+.clip{padding:4px 20px 0}
+.clip .tm{display:flex;justify-content:space-between;font-size:13px;font-weight:500;color:rgba(242,243,243,.65);font-variant-numeric:tabular-nums;margin-top:10px}
+.clip .tm:first-child{margin-top:0}
+.clip .tm b{color:#F2F3F3;font-weight:600}
+.clip .tl{position:relative;height:58px;margin-top:12px;border-radius:12px;touch-action:none;background:rgba(255,255,255,.06)}
+.clip .ths{position:absolute;inset:0;display:flex;border-radius:12px;overflow:hidden}
+.clip .ths img{flex:1;min-width:0;height:100%;object-fit:cover}
+.clip .sh{position:absolute;top:0;bottom:0;background:rgba(18,19,21,.68);pointer-events:none}
+.clip .sh#cShL{border-radius:12px 0 0 12px}.clip .sh#cShR{border-radius:0 12px 12px 0}
+.clip .win{position:absolute;top:-2px;bottom:-2px;border:3px solid var(--amarillo);border-radius:11px;pointer-events:none}
+.clip .h{position:absolute;top:50%;width:14px;height:30px;margin-top:-15px;border-radius:5px;background:var(--amarillo);pointer-events:auto}
+.clip .h:after{content:'';position:absolute;left:5.5px;top:9px;width:3px;height:12px;border-radius:2px;background:rgba(21,23,26,.55)}
+.clip .h.l{left:-9px}.clip .h.r{right:-9px}
+.clip .ph{position:absolute;top:-5px;bottom:-5px;width:3px;margin-left:-1.5px;border-radius:2px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,.5);pointer-events:none}
+/* datos del vídeo */
+.vinfo{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin:0 14px 6px;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.06)}
+.vinfo .vi{background:rgba(21,23,26,.6);padding:9px 12px;position:relative;min-height:52px}
+.view:not(.dark) .vinfo{background:rgba(21,23,26,.08)}.view:not(.dark) .vinfo .vi{background:#fff}
+.vinfo small{display:block;font-size:11.5px;color:rgba(242,243,243,.5)}
+.view:not(.dark) .vinfo small{color:var(--gris)}
+.vinfo b{display:block;font-size:14.5px;font-weight:500;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vinfo .bm{position:absolute;right:10px;bottom:10px;font-size:9.5px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--amarillo);border:1px solid rgba(237,187,42,.5);border-radius:7px;padding:1px 5px}
+/* exportar vídeo */
+.sheet .xv{font-size:15px;font-weight:600;white-space:nowrap}
+.xinfo{font-size:13.5px;color:var(--gris);padding:12px 0 2px;min-height:20px}
+.xprog{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(18,19,21,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff;opacity:0;pointer-events:none;transition:opacity .3s var(--suave)}
+.xprog.on{opacity:1;pointer-events:auto}
+.xprog .ring{--k:0%;width:92px;height:92px;border-radius:50%;background:conic-gradient(var(--cian) 0 var(--k),rgba(255,255,255,.18) var(--k) 100%);display:flex;align-items:center;justify-content:center;transition:--k .3s}
+.xprog .ring b{width:78px;height:78px;border-radius:50%;background:#15171A;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;color:#fff}
+.xprog p{font-size:14.5px;font-weight:500;text-align:center;line-height:1.5}
+.xprog p small{opacity:.7;font-weight:400;font-size:13px}
+.xprog .xa{display:flex;flex-direction:column;align-items:center;gap:10px;width:min(300px,80%)}
+.xprog .xa .chip{background:rgba(255,255,255,.14);color:#fff}
+.sheet .light-seg button{white-space:nowrap}

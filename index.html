@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="preload" href="fonts/interd-600.woff" as="font" type="font/woff" crossorigin>
-<link rel="stylesheet" href="css/metadat.css?v=1.1.0">
+<link rel="stylesheet" href="css/metadat.css?v=1.2.0">
 </head>
 <body>
 
@@ -30,7 +30,12 @@
   <div class="hdr"><button class="ib tap" data-back aria-label="Volver" data-i="back"></button><div class="ctr">Componer</div><div class="sp"></div>
         <button class="ib tap" id="btnCmp" aria-label="Comparar (mantén pulsado)" data-i="compare"></button>
     <button class="ib tap cian" id="btnExport" aria-label="Exportar" data-i="share"></button></div>
-  <div class="stage" id="stage"><div class="cvw" id="cvw"></div><div class="orig">Original</div><div class="hist" id="hist"></div><button class="hbtn tap" id="btnHist" aria-label="Histograma" data-i="hist" data-s="18"></button><div class="busy" id="busy"><i></i><i></i><i></i></div></div>
+  <div class="stage" id="stage"><div class="cvw" id="cvw"></div><div class="orig">Original</div><div class="hist" id="hist"></div><button class="hbtn tap" id="btnHist" aria-label="Histograma" data-i="hist" data-s="18"></button><div class="busy" id="busy"><i></i><i></i><i></i></div>
+    <div class="vtag" id="vTag"></div>
+    <div class="frov" id="frOv"><i></i><i></i><i></i><i></i></div><div class="zchip" id="zChip"></div>
+    <div class="vbar" id="vBar"><button class="vplay tap" id="vPlay" aria-label="Reproducir"><svg viewBox="0 0 24 24" width="18" height="18"><path class="pl" d="M7 4.5v15l12.5-7.5z" fill="currentColor"/><path class="pa" d="M7 4.5h3.6v15H7zM13.4 4.5H17v15h-3.6z" fill="currentColor"/></svg></button><span id="vT0">0:00</span><div class="vtr" id="vTr"><i></i><u></u></div><span id="vT1">0:00</span></div>
+    <div class="xprog" id="xProg"><div class="ring"><b></b></div><p></p><div class="xa"></div></div>
+  </div>
   <div class="panel">
     <div class="pane on" id="pEstilo">
       <div class="strip" id="frStrip"></div>
@@ -41,11 +46,17 @@
       <div id="imgFilm"><div class="opts cats" id="filmCats"></div><div class="strip" id="filmStrip"></div><div class="cap" id="filmCap"></div><div class="ruler" id="rulerFilm"></div></div>
       <div id="imgAdj" style="display:none"><div class="adj-row" id="adjRow"></div><div class="ruler" id="rulerAdj"></div></div>
     </div>
+    <div class="pane" id="pClip">
+      <div class="clip"><div class="tm"><span>Recortar el vídeo</span><span id="cLen"></span></div>
+        <div class="tl" id="cTl"><div class="ths" id="cThs"></div><div class="sh" id="cShL" style="left:0"></div><div class="sh" id="cShR" style="right:0"></div><div class="win" id="cWin"><i class="h l"></i><i class="h r"></i></div><div class="ph" id="cPh"></div></div>
+        <div class="tm"><span>Desde <b id="cA"></b></span><span>Hasta <b id="cB"></b></span></div></div>
+      <div class="opts" id="cOpts"></div>
+    </div>
     <div class="pane" id="pDatos">
       <div class="dhead"><small id="dStat"></small></div>
       <div class="dlist" id="dList"></div>
     </div>
-    <div class="tabs"><div class="seg" id="segTabs"><button class="on" data-v="pEstilo"><span data-i="grid" data-s="16"></span>Estilo</button><button data-v="pImagen"><span data-i="aperture" data-s="16"></span>Imagen</button><button data-v="pDatos"><span data-i="tag" data-s="16"></span>Datos</button></div></div>
+    <div class="tabs"><div class="seg" id="segTabs"><button class="on" data-v="pEstilo"><span data-i="grid" data-s="16"></span>Estilo</button><button data-v="pImagen"><span data-i="aperture" data-s="16"></span>Imagen</button><button data-v="pClip" id="tabClip" hidden><span data-i="clip" data-s="16"></span>Clip</button><button data-v="pDatos"><span data-i="tag" data-s="16"></span>Datos</button></div></div>
   </div>
 </section>
 
@@ -58,12 +69,14 @@
 <div class="toast" id="toast"></div>
 <div class="flash" id="flash"></div>
 <input type="file" id="fileOne" accept="image/*" hidden>
+<input type="file" id="fileMedia" accept="image/*,video/*" hidden>
 <input type="file" id="fileMany" accept="image/*" multiple hidden>
 <input type="file" id="fileAny" hidden>
 
-<script src="js/exif.js?v=1.1.0"></script>
-<script src="js/img.js?v=1.1.0"></script>
-<script src="js/frames.js?v=1.1.0"></script>
-<script src="js/app.js?v=1.1.0"></script>
+<script src="js/exif.js?v=1.2.0"></script>
+<script src="js/img.js?v=1.2.0"></script>
+<script src="js/frames.js?v=1.2.0"></script>
+<script src="js/video.js?v=1.2.0"></script>
+<script src="js/app.js?v=1.2.0"></script>
 </body>
 </html>

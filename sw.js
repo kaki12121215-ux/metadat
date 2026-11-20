@@ -1,6 +1,6 @@
 /* Metadat · service worker: funciona sin conexión */
-const CACHE = 'metadat-1.1.0';
-const FILES = ['./', 'index.html', 'manifest.webmanifest', 'css/metadat.css?v=1.1.0', 'js/exif.js?v=1.1.0', 'js/img.js?v=1.1.0', 'js/frames.js?v=1.1.0', 'js/app.js?v=1.1.0',
+const CACHE = 'metadat-1.2.0';
+const FILES = ['./', 'index.html', 'manifest.webmanifest', 'css/metadat.css?v=1.2.0', 'js/exif.js?v=1.2.0', 'js/img.js?v=1.2.0', 'js/frames.js?v=1.2.0', 'js/video.js?v=1.2.0', 'js/app.js?v=1.2.0',
   'img/logo_negro.png', 'img/logo_blanco.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
   'fonts/inter-400.woff', 'fonts/inter-500.woff', 'fonts/inter-600.woff', 'fonts/interd-300.woff', 'fonts/interd-500.woff', 'fonts/interd-600.woff', 'fonts/lora.woff', 'fonts/lora-i.woff', 'fonts/mono.woff'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });

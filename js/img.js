@@ -66,20 +66,28 @@
 
   const clamp = v => v < 0 ? 0 : v > 255 ? 255 : v;
 
-  // Recorta la foto a una proporción (h/w) y devuelve un canvas de ancho máximo maxW
-  function crop(img, ratio, maxSide) {
-    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
-    let sx = 0, sy = 0, sw = iw, sh = ih;
-    if (ratio) {
-      if (ih / iw > ratio) { sh = iw * ratio; sy = (ih - sh) / 2; }
-      else { sw = ih / ratio; sx = (iw - sw) / 2; }
-    }
+  // Ventana de recorte: proporción (h/w) + encuadre { z: zoom >= 1, cx, cy: centro de 0 a 1 }
+  const dimsOf = img => [img.videoWidth || img.naturalWidth || img.width, img.videoHeight || img.naturalHeight || img.height];
+  function cropWin(img, ratio, view) {
+    const [iw, ih] = dimsOf(img);
+    let sw = iw, sh = ih;
+    if (ratio) { if (ih / iw > ratio) sh = iw * ratio; else sw = ih / ratio; }
+    const z = view && view.z > 1 ? view.z : 1; sw /= z; sh /= z;
+    const cx = view && view.cx != null ? view.cx : .5, cy = view && view.cy != null ? view.cy : .5;
+    const sx = Math.max(0, Math.min(iw - sw, cx * iw - sw / 2)), sy = Math.max(0, Math.min(ih - sh, cy * ih - sh / 2));
+    return { sx, sy, sw, sh, iw, ih };
+  }
+  // Recorta la foto (o el fotograma del vídeo) y devuelve un canvas de lado máximo maxSide.
+  // Si se pasa "into" y ya tiene el tamaño correcto, se reutiliza (para el vídeo, fotograma a fotograma).
+  function crop(img, ratio, maxSide, view, into) {
+    const { sx, sy, sw, sh } = cropWin(img, ratio, view);
     const k = Math.min(1, maxSide / Math.max(sw, sh));
-    const c = document.createElement('canvas');
-    c.width = Math.max(1, Math.round(sw * k)); c.height = Math.max(1, Math.round(sh * k));
+    const W = Math.max(1, Math.round(sw * k)), H = Math.max(1, Math.round(sh * k));
+    const c = into || document.createElement('canvas');
+    if (c.width !== W) c.width = W; if (c.height !== H) c.height = H;
     const x = c.getContext('2d');
     x.imageSmoothingQuality = 'high';
-    x.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    x.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
     return c;
   }
 
@@ -213,5 +221,5 @@
     return dark ? 'Vino' : 'Rosa';
   }
 
-  window.MetaImg = { FILMS, CATS, ADJ, crop, process, histogram, blurred, palette, colorName };
+  window.MetaImg = { FILMS, CATS, ADJ, crop, cropWin, dimsOf, process, histogram, blurred, palette, colorName };
 })();
