@@ -61,7 +61,7 @@
         if (b.t === 'udta') { const m = kid(dv, b, 'meta'); if (m) readKeys(dv, m, M.keys); kids(dv, b.c, b.e).forEach(u => { if (u.t === '©xyz') { const l = dv.getUint16(u.c); M.keys['com.apple.quicktime.location.ISO6709'] = M.keys['com.apple.quicktime.location.ISO6709'] || td.decode(new Uint8Array(dv.buffer, dv.byteOffset + u.c + 4, l)); } }); }
         if (b.t === 'trak') {
           const md = kid(dv, b, 'mdia'); if (!md) return; const hd = kid(dv, md, 'hdlr'); if (!hd) return; const ht = cc(dv, hd.c + 8);
-          if (ht === 'soun') M.hasAudio = true;
+          if (ht === 'soun') { M.hasAudio = true; if (!M.atrack) { try { const mi = kid(dv, md, 'minf'), sb = mi && kid(dv, mi, 'stbl'), mh = kid(dv, md, 'mdhd'); const v = dv.getUint8(mh.c); M.atrack = audioTable(dv, sb, dv.getUint32(mh.c + (v ? 20 : 12))); } catch (e) { console.warn('audio tabla', e); } } }
           if (ht !== 'vide' || M.codec) return;
           const mdhd = kid(dv, md, 'mdhd'); const v = dv.getUint8(mdhd.c); const ts = dv.getUint32(mdhd.c + (v ? 20 : 12));
           const minf = kid(dv, md, 'minf'), stbl = minf && kid(dv, minf, 'stbl');
@@ -75,6 +75,37 @@
       });
     } catch (e) { console.warn('parse vídeo', e); }
     return M;
+  }
+
+  // Tabla de la pista de sonido: se copia tal cual al exportar (sin volver a comprimir)
+  function audioTable(dv, stbl, ts) {
+    const K = t => kid(dv, stbl, t);
+    const sd = K('stsd'), eo = sd.c + 8, esz = dv.getUint32(eo);
+    const entry = new Uint8Array(dv.buffer.slice(dv.byteOffset + eo, dv.byteOffset + eo + esz));
+    const sz = K('stsz'), cs = dv.getUint32(sz.c + 4), n = dv.getUint32(sz.c + 8);
+    const size = i => cs || dv.getUint32(sz.c + 12 + i * 4);
+    const co = K('co64') || K('stco'), big = co.t === 'co64', nc = dv.getUint32(co.c + 4);
+    const sc = K('stsc'), ns = dv.getUint32(sc.c + 4), runs = [];
+    for (let i = 0; i < ns; i++) runs.push([dv.getUint32(sc.c + 8 + i * 12), dv.getUint32(sc.c + 12 + i * 12)]);
+    const offs = new Float64Array(n), sizes = new Uint32Array(n); let si = 0;
+    for (let c = 0; c < nc && si < n; c++) { let per = 0; for (const r of runs) if (r[0] <= c + 1) per = r[1]; let o = big ? Number(dv.getBigUint64(co.c + 8 + c * 8)) : dv.getUint32(co.c + 8 + c * 4); for (let k = 0; k < per && si < n; k++) { offs[si] = o; sizes[si] = size(si); o += sizes[si]; si++; } }
+    const tt = K('stts'), dts = new Float64Array(n), durs = new Uint32Array(n); let t = 0, j = 0; const ne = dv.getUint32(tt.c + 4);
+    for (let e = 0; e < ne; e++) { const c = dv.getUint32(tt.c + 8 + e * 8), d = dv.getUint32(tt.c + 12 + e * 8); for (let k = 0; k < c && j < n; k++) { dts[j] = t; durs[j++] = d; t += d; } }
+    return { entry, ts, n, offs, sizes, dts, durs, cs };
+  }
+  // Copia el sonido original entre a y b
+  async function copyAudio(file, T, a, b) {
+    let i0 = -1, i1 = -1;
+    for (let i = 0; i < T.n; i++) { const t = T.dts[i] / T.ts; if (t >= a - 1e-4 && i0 < 0) i0 = i; if (t < b - 1e-4) i1 = i + 1; }
+    if (i0 < 0 || i1 <= i0) return null;
+    const units = []; let i = i0;
+    while (i < i1) {
+      let j = i + 1, end = T.offs[i] + T.sizes[i];
+      while (j < i1 && T.offs[j] === end && end - T.offs[i] < 4e6) { end += T.sizes[j]; j++; }
+      units.push({ d: new Uint8Array(await file.slice(T.offs[i], end).arrayBuffer()), n: j - i, t: (T.dts[i] / T.ts) - a });
+      i = j;
+    }
+    return { mode: 'copy', entry: T.entry, ts: T.ts, units, sizes: T.cs ? null : Array.from(T.sizes.subarray(i0, i1)), cs: T.cs, count: i1 - i0, durs: Array.from(T.durs.subarray(i0, i1)) };
   }
 
   // Tabla de muestras de la pista de vídeo: dónde está cada fotograma en el archivo y cuándo se ve
@@ -94,7 +125,7 @@
     const tt = K('stts'), dts = new Array(n); let t = 0, j = 0; const ne = dv.getUint32(tt.c + 4);
     for (let e = 0; e < ne; e++) { const c = dv.getUint32(tt.c + 8 + e * 8), d = dv.getUint32(tt.c + 12 + e * 8); for (let k = 0; k < c && j < n; k++) { dts[j++] = t; t += d; } }
     const ct = K('ctts'), cto = new Array(n).fill(0);
-    if (ct) { const v = dv.getUint8(ct.c), m = dv.getUint32(ct.c + 4); let q = 0; for (let e = 0; e < m; e++) { const c = dv.getUint32(ct.c + 8 + e * 8); const o = v ? dv.getInt32(ct.c + 12 + e * 8) : dv.getUint32(ct.c + 12 + e * 8); for (let k = 0; k < c && q < n; k++) cto[q++] = o; } }
+    if (ct) { const v = dv.getUint8(ct.c), m = dv.getUint32(ct.c + 4); let q = 0; for (let e = 0; e < m; e++) { const c = dv.getUint32(ct.c + 8 + e * 8); const o = dv.getInt32(ct.c + 12 + e * 8); /* con signo: Blackmagic usa negativos aunque la versión sea 0 */ for (let k = 0; k < c && q < n; k++) cto[q++] = o; } }
     const ss = K('stss'); let keys = null;
     if (ss) { keys = new Set(); const m = dv.getUint32(ss.c + 4); for (let e = 0; e < m; e++) keys.add(dv.getUint32(ss.c + 8 + e * 4) - 1); }
     // lista de edición: desde dónde empieza a verse
@@ -201,7 +232,8 @@
       const w = even(W * k), h = even(H * k);
       for (const [kind, codec] of list) {
         const cfg = { codec, width: w, height: h, bitrate: bitrateFor(kind, w, h), framerate: fps, latencyMode: 'quality', bitrateMode: 'variable' };
-        if (kind === 'hevc') cfg.hevc = { format: 'hevc' }; else cfg.avc = { format: 'avc' };
+        const fm = window.__metadatAnnexB ? 'annexb' : null; // solo para pruebas
+        if (kind === 'hevc') cfg.hevc = { format: fm || 'hevc' }; else cfg.avc = { format: fm || 'avc' };
         try { const s = await VideoEncoder.isConfigSupported(cfg); if (s && s.supported) return { kind, cfg, k }; } catch (e) { }
       }
       k *= .88;
@@ -231,8 +263,9 @@
     if (cfg.width !== o.size.W || cfg.height !== o.size.H) o.resize && o.resize(cfg.width, cfg.height);
 
     // sonido (opcional; si falla, sale sin sonido y se avisa)
-    let AU = null, soundNote = '';
-    if (o.sound) {
+    let AU = null, soundNote = '', COPY = null;
+    if (o.sound && o.M && o.M.atrack) { try { COPY = await copyAudio(o.file, o.M.atrack, o.a, o.b); } catch (e) { console.warn('copiar audio', e); } }
+    if (o.sound && !COPY) {
       try {
         const ab = await decodeAudio(o.file); const sr = ab.sampleRate, ch = Math.min(2, ab.numberOfChannels);
         const a0 = Math.round(o.a * sr), a1 = Math.min(ab.length, Math.round(o.b * sr)), len = Math.max(0, a1 - a0);
@@ -240,7 +273,7 @@
         AU = { sr, ch, len, planes, mode: await audioMode(sr, ch) };
       } catch (e) { console.warn('audio', e); soundNote = 'nosound'; }
     }
-    const container = AU && AU.mode === 'pcm' ? 'mov' : 'mp4';
+    const container = 'mov'; // el formato del iPhone: Fotos lo guarda siempre
 
     // vídeo
     const vchunks = []; let vdesc = null, encErr = null;
@@ -279,11 +312,12 @@
     }
     if (!count) throw new Error('Sin fotogramas');
     await enc.flush(); enc.close(); if (encErr) throw encErr;
+    fixAnnexB(vchunks, kind, d => { vdesc = d; }, vdesc);
     if (!vdesc) throw Object.assign(new Error('Sin descripción del códec'), { code: 'nocodec' });
 
     // audio
-    let A = null;
-    if (AU) {
+    let A = COPY;
+    if (!A && AU) {
       if (AU.mode === 'aac') {
         const achunks = []; let adesc = null, aerr = null;
         const ae = new AudioEncoder({ output: (ch, md) => { const d = new Uint8Array(ch.byteLength); ch.copyTo(d); achunks.push({ d, ts: ch.timestamp, dur: ch.duration }); if (md && md.decoderConfig && md.decoderConfig.description && !adesc) adesc = new Uint8Array(md.decoderConfig.description.buffer ? md.decoderConfig.description.buffer.slice(0) : md.decoderConfig.description); }, error: e => { aerr = e; } });
@@ -309,6 +343,42 @@
     const blob = mux({ container, kind, W: cfg.width, H: cfg.height, fps, vchunks, vdesc, A });
     return { blob, ext: container, type: container === 'mov' ? 'video/quicktime' : 'video/mp4', kind, sound: !!A, soundNote, W: cfg.width, H: cfg.height, used, frames: count };
   }
+  // Si el codificador entrega los fotogramas con códigos de inicio (Annex B), se pasan al formato de MP4/MOV
+  function nalsOf(d) {
+    const out = []; let i = 0, st = -1;
+    const isSC = k => d[k] === 0 && d[k + 1] === 0 && (d[k + 2] === 1 || (d[k + 2] === 0 && d[k + 3] === 1));
+    while (i < d.length - 3) { if (isSC(i)) { const len = d[i + 2] === 1 ? 3 : 4; if (st >= 0) out.push(d.subarray(st, i)); st = i + len; i += len; } else i++; }
+    if (st >= 0) out.push(d.subarray(st)); return out.map(n => { let e = n.length; while (e > 0 && n[e - 1] === 0) e--; return n.subarray(0, e); }).filter(n => n.length);
+  }
+  function unescape(n) { const o = []; for (let i = 0; i < n.length; i++) { if (i >= 2 && n[i] === 3 && n[i - 1] === 0 && n[i - 2] === 0) continue; o.push(n[i]); } return new Uint8Array(o); }
+  function fixAnnexB(ch, kind, setDesc, desc) {
+    if (!ch.length) return; const d0 = ch[0].d;
+    if (!(d0[0] === 0 && d0[1] === 0 && (d0[2] === 1 || (d0[2] === 0 && d0[3] === 1)))) return;
+    console.info('Metadat: Annex B convertido'); const hevc = kind === 'hevc', ps = { vps: null, sps: null, pps: null };
+    ch.forEach(c => {
+      const keep = [];
+      nalsOf(c.d).forEach(n => {
+        const t = hevc ? (n[0] >> 1) & 63 : n[0] & 31;
+        if (hevc ? t === 32 : false) { ps.vps = ps.vps || n; return; }
+        if (hevc ? t === 33 : t === 7) { ps.sps = ps.sps || n; return; }
+        if (hevc ? t === 34 : t === 8) { ps.pps = ps.pps || n; return; }
+        if (hevc ? t === 35 || t === 39 || t === 40 : t === 9 || t === 6) return; // delimitadores y SEI
+        keep.push(n);
+      });
+      let L = 0; keep.forEach(n => L += 4 + n.length); const o = new Uint8Array(L); let k = 0;
+      keep.forEach(n => { o[k] = n.length >>> 24; o[k + 1] = n.length >> 16 & 255; o[k + 2] = n.length >> 8 & 255; o[k + 3] = n.length & 255; o.set(n, k + 4); k += 4 + n.length; });
+      c.d = o;
+    });
+    if (desc && desc.length > 7 && desc[0] === 1) return; // ya había descripción buena
+    if (!ps.sps || !ps.pps) return;
+    const arr = (t, n) => cat([u8([0x80 | t]), u16(1), u16(n.length), n]);
+    if (hevc) {
+      if (!ps.vps) return; const r = unescape(ps.sps); // r[0..1] cabecera; r[2] ids; r[3..14] perfil
+      setDesc(cat([u8([1, r[3]]), r.subarray(4, 8), r.subarray(8, 14), u8([r[14]]), u8([0xF0, 0, 0xFC, 0xFD, 0xF8, 0xF8, 0, 0, 0x0F, 3]), arr(32, ps.vps), arr(33, ps.sps), arr(34, ps.pps)]));
+    } else {
+      setDesc(cat([u8([1, ps.sps[1], ps.sps[2], ps.sps[3], 0xFF, 0xE1]), u16(ps.sps.length), ps.sps, u8([1]), u16(ps.pps.length), ps.pps]));
+    }
+  }
   function asc(sr, ch) { const R = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000]; const fi = Math.max(0, R.indexOf(sr)); return new Uint8Array([(2 << 3) | (fi >> 1), ((fi & 1) << 7) | (ch << 3)]); }
 
   // ------------------------------------------------------------------ empaquetar (MP4 / MOV)
@@ -332,8 +402,8 @@
     // datos: vídeo y audio intercalados por segundos, para que se reproduzca fluido
     const parts = []; let off = head;
     const vOff = [], aOff = [];
-    const aUnits = A ? (A.mode === 'aac' ? A.chunks.map(c => c.d) : (() => { const out = [], per = A.sr, bpf = 2 * A.ch; for (let p = 0; p < A.frames; p += per) out.push(A.pcm.subarray(p * bpf, Math.min(A.frames, p + per) * bpf)); return out; })()) : [];
-    const aTimes = A ? (A.mode === 'aac' ? A.chunks.map(c => c.ts / 1e6) : aUnits.map((_, i) => i)) : [];
+    const aUnits = A ? (A.mode === 'copy' ? A.units.map(u => u.d) : A.mode === 'aac' ? A.chunks.map(c => c.d) : (() => { const out = [], per = A.sr, bpf = 2 * A.ch; for (let p = 0; p < A.frames; p += per) out.push(A.pcm.subarray(p * bpf, Math.min(A.frames, p + per) * bpf)); return out; })()) : [];
+    const aTimes = A ? (A.mode === 'copy' ? A.units.map(u => u.t) : A.mode === 'aac' ? A.chunks.map(c => c.ts / 1e6) : aUnits.map((_, i) => i)) : [];
     let ai = 0;
     vchunks.forEach((c, i) => {
       const t = i / fps;
@@ -377,8 +447,15 @@
     // pista de audio
     let aTrak = null;
     if (A) {
-      let entry, stts, stsz, stsc, aDur;
-      if (A.mode === 'aac') {
+      let entry, stts, stsz, stsc, aDur, ATS = A.sr;
+      if (A.mode === 'copy') {
+        ATS = A.ts; entry = A.entry; aDur = A.durs.reduce((x, y) => x + y, 0);
+        const rl = []; A.durs.forEach(d => { const l = rl[rl.length - 1]; if (l && l[1] === d) l[0]++; else rl.push([1, d]); });
+        stts = full('stts', 0, 0, u32(rl.length), ...rl.map(([c, d]) => cat([u32(c), u32(d)])));
+        stsz = A.cs ? full('stsz', 0, 0, u32(A.cs), u32(A.count)) : full('stsz', 0, 0, u32(0), u32(A.count), ...A.sizes.map(u32));
+        const sr = []; A.units.forEach((u, i) => { const l = sr[sr.length - 1]; if (!l || l[1] !== u.n) sr.push([i + 1, u.n]); });
+        stsc = full('stsc', 0, 0, u32(sr.length), ...sr.map(([f, n]) => cat([u32(f), u32(n), u32(1)])));
+      } else if (A.mode === 'aac') {
         const es = esds(A.desc, A.ch);
         entry = box('mp4a', zeros(6), u16(1), zeros(8), u16(A.ch), u16(16), u16(0), u16(0), u32(A.sr * 65536), es);
         const m = A.chunks.length; aDur = m * 1024;
@@ -395,10 +472,10 @@
           : full('stsc', 0, 0, u32(2), u32(1), u32(per), u32(1), u32(m), u32(last), u32(1));
       }
       const aStbl = box('stbl', full('stsd', 0, 0, u32(1), entry), stts, stsc, stsz, full('co64', 0, 0, u32(aOff.length), ...aOff.map(u64)));
-      const adMs = Math.round(aDur / A.sr * MTS);
+      const adMs = Math.round(aDur / ATS * MTS);
       aTrak = box('trak',
         full('tkhd', 0, 3, u32(now), u32(now), u32(2), u32(0), u32(adMs), zeros(8), u16(0), u16(1), u16(0x0100), u16(0), MATRIX, u32(0), u32(0)),
-        box('mdia', full('mdhd', 0, 0, u32(now), u32(now), u32(A.sr), u32(aDur), u16(0x55c4), u16(0)), hdlr('soun', 'Sound'),
+        box('mdia', full('mdhd', 0, 0, u32(now), u32(now), u32(ATS), u32(aDur), u16(0x55c4), u16(0)), hdlr('soun', 'Sound'),
           box('minf', full('smhd', 0, 0, u16(0), u16(0)), dinf, aStbl)));
     }
     const mvhd = full('mvhd', 0, 0, u32(now), u32(now), u32(MTS), u32(mvDur), u32(0x10000), u16(0x100), zeros(10), MATRIX, zeros(24), u32(A ? 3 : 2));
@@ -414,5 +491,5 @@
     return full('esds', 0, 0, es);
   }
 
-  window.MetaVideo = { parse, openVideo, seek, exportVideo, pickConfig, audioMode, decoderFor, eachFrame, isVideo: f => /^video\//.test(f.type || '') || /\.(mov|mp4|m4v|hevc)$/i.test(f.name || '') };
+  window.MetaVideo = { parse, openVideo, seek, exportVideo, pickConfig, audioMode, decoderFor, eachFrame, mux, copyAudio, isVideo: f => /^video\//.test(f.type || '') || /\.(mov|mp4|m4v|hevc)$/i.test(f.name || '') };
 })();

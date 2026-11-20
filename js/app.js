@@ -1,7 +1,7 @@
 /* Metadat · app */
 (function () {
   'use strict';
-  const VERSION = '1.2.0';
+  const VERSION = '1.2.1';
   const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const FR = MetaFrames.F, FILMS = MetaImg.FILMS, ADJ = MetaImg.ADJ;
@@ -687,7 +687,7 @@
     const sh = sheet(`<h3>Exportar vídeo</h3><div class="sub">Sale con el marco y los datos que ves, sin metadatos ocultos.</div>
       <div class="srow"><div class="t"><b>Resolución</b><small id="xResS"></small></div><div class="light-seg" id="xRes">${MODES.map(([v, l]) => `<button data-v="${v}" class="${v === mode ? 'on' : ''}">${l}</button>`).join('')}</div></div>
       <div class="srow"><div class="t"><b>Calidad</b><small>Más que el original: no se nota la diferencia</small></div><b class="xv">Máxima</b></div>
-      <div class="srow"><div class="t"><b>Formato</b><small>Se guarda en Fotos y se puede compartir</small></div><b class="xv" id="xFmt">…</b></div>
+      <div class="srow"><div class="t"><b>Formato</b><small>El del iPhone: se guarda en Fotos</small></div><b class="xv" id="xFmt">…</b></div>
       ${R.audio ? `<div class="srow"><div class="t"><b>Sonido</b></div><button class="tog ${sound ? 'on' : ''}" id="xSnd"><i></i></button></div>` : ''}
       <div class="xinfo" id="xInfo"></div>
       <div class="acts"><button class="btn tap" id="xGo">Exportar vídeo</button></div>`, { dark: S.darkComp });
@@ -700,8 +700,7 @@
       const pct = Math.min(100, Math.round(z.scale * pick.k * 100));
       $('#xResS', sh).textContent = pct >= 99 ? 'Imagen del vídeo píxel a píxel' : `Imagen del vídeo al ${pct} %`;
       const mb = pick.cfg.bitrate / 8e6 * len + (sound ? .2 * len : 0);
-      const am = sound ? await MetaVideo.audioMode(48000, 2) : 'aac'; if (my !== job) return;
-      $('#xFmt', sh).textContent = (am === 'pcm' ? 'MOV' : 'MP4') + ' · ' + (pick.kind === 'hevc' ? 'HEVC' : 'H.264');
+      $('#xFmt', sh).textContent = 'MOV · ' + (pick.kind === 'hevc' ? 'HEVC' : 'H.264');
       $('#xInfo', sh).textContent = `${numES(len, 1)} s · ${pick.cfg.width} × ${pick.cfg.height} · unos ${Math.max(1, Math.round(mb))} MB`;
     };
     seg($('#xRes', sh), v => { mode = v; S.vmode = v; saveS(); info(); });
@@ -738,7 +737,7 @@
       acts.innerHTML = `<button class="btn tap" id="xShare">${ic('share', 20)}Guardar o compartir</button><button class="chip tap" id="xClose">Cerrar</button>`;
       $('#xShare').onclick = async () => { const ok = await shareFiles([file]); if (ok) toast('Vídeo listo'); };
       $('#xClose').onclick = () => X.classList.remove('on');
-      if (res.soundNote) toast('Ha salido sin sonido: no se ha podido leer el audio del vídeo');
+      if (res.soundNote) toast('Ha salido sin sonido: no se ha podido leer el sonido de este vídeo');
       flash();
     } catch (e) {
       console.error(e);
@@ -1100,5 +1099,5 @@
   Promise.all(['400 16px MInter', '500 16px MInter', '600 16px MInter', '300 40px MInterD', '600 30px MInterD', '400 30px MLora', 'italic 400 30px MLoraI', '400 16px MMono'].map(f => document.fonts ? document.fonts.load(f) : 0)).catch(() => { }).finally(() => { if (C.cvs) drawStage(); });
   renderHome(); intro();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
-  window.__metadat = { openComposer, S, FR, toolOpen: openTool, back, renderFrame: (id, th, w = 1080) => MetaFrames.render(FR.find(f => f.id === id), C.P, dataNow(), opts(th), w) };
+  window.__metadat = { openComposer, S, FR, VS, toolOpen: openTool, back, renderFrame: (id, th, w = 1080) => MetaFrames.render(FR.find(f => f.id === id), C.P, dataNow(), opts(th), w) };
 })();
